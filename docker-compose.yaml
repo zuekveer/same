@@ -1,0 +1,44 @@
+
+services:
+  app:
+    build: .
+    env_file:
+      - .env
+    ports:
+      - "8088:8088"
+    networks:
+      - zkr-network
+    restart: on-failure
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16
+    environment:
+      - "POSTGRES_DB=${DB_DATABASE}"
+      - "POSTGRES_USER=${DB_USER}"
+      - "POSTGRES_PASSWORD=${DB_PASSWORD}"
+    ports:
+      - "${DB_HOST_PORT}:${DB_PORT}"
+    #TODO:add volume
+    #    volumes:
+    #      - ./pgdata:/var/lib/postgresql/data  # Persist data
+    networks:
+      - zkr-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin4_container
+    restart: always
+    ports:
+      - '8888:80'
+    environment:
+      PGADMIN_DEFAULT_EMAIL: user-name@domain-name.com
+      PGADMIN_DEFAULT_PASSWORD: password
+
+networks:
+  zkr-network:
+    driver: bridge
