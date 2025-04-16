@@ -1,4 +1,3 @@
-
 services:
   app:
     build: .
@@ -6,13 +5,12 @@ services:
       - .env
     ports:
       - "8088:8088"
-    networks:
-      - zkr-network
     restart: on-failure
     depends_on:
-      - db
+        postgres:
+          condition: service_healthy
 
-  db:
+  postgres:
     image: postgres:16
     environment:
       - "POSTGRES_DB=${DB_DATABASE}"
@@ -20,14 +18,14 @@ services:
       - "POSTGRES_PASSWORD=${DB_PASSWORD}"
     ports:
       - "${DB_HOST_PORT}:${DB_PORT}"
-    #TODO:add volume
-    #    volumes:
-    #      - ./pgdata:/var/lib/postgresql/data  # Persist data
-    networks:
-      - zkr-network
+    volumes:
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
-      interval: 5s
+        test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-}" ]
+        interval: 30s
+        timeout: 30s
+        retries: 3
+        start_period: 10s
 
   pgadmin:
     image: dpage/pgadmin4
@@ -39,6 +37,5 @@ services:
       PGADMIN_DEFAULT_EMAIL: user-name@domain-name.com
       PGADMIN_DEFAULT_PASSWORD: password
 
-networks:
-  zkr-network:
-    driver: bridge
+volumes:
+  pgdata:

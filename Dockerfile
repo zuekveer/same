@@ -1,4 +1,4 @@
-FROM golang:1.21.0 AS builder
+FROM golang:1.23.0 AS builder
 
 # Set the current working directory inside the container
 WORKDIR /app
@@ -6,8 +6,8 @@ WORKDIR /app
 # Copy the Go modules manifests
 COPY go.mod go.sum ./
 
-# Download dependencies
-RUN go mod download
+# Tidy and download dependencies
+RUN go mod tidy && go mod download
 
 # Copy the source code into the container
 COPY . .
@@ -19,13 +19,10 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o application cmd/main.go
 FROM alpine:3.20.2
 
 # Set the working directory inside the container
-WORKDIR /root/
+WORKDIR /app/
 
 # Copy the pre-built binary from the previous stage
 COPY --from=builder /app/application .
-
-# Expose port 8088 to the outside world
-EXPOSE 8088
 
 # Command to run the executable
 CMD ["./application"]
