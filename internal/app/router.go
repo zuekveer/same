@@ -9,6 +9,7 @@ func GetRouter(
 	updateUser fiber.Handler,
 	getUser fiber.Handler,
 	deleteUser fiber.Handler,
+	getAllUsers fiber.Handler,
 ) *fiber.App {
 	app := fiber.New()
 
@@ -16,6 +17,7 @@ func GetRouter(
 	app.Put("/user", updateUser)
 	app.Get("/user/:id", getUser)
 	app.Delete("/user/:id", deleteUser)
+	app.Get("/users", getAllUsers)
 
 	return app
 }
