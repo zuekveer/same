@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"app/internal/models"
+	"app/internal/entity"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -18,8 +18,8 @@ func NewUserRepo(db *pgxpool.Pool) *UserRepo {
 	return &UserRepo{db: db}
 }
 
-func (r *UserRepo) GetAll(limit, offset int) ([]models.ResponseUser, error) {
-	var users []models.ResponseUser
+func (r *UserRepo) GetAll(limit, offset int) ([]entity.User, error) {
+	var users []entity.User
 	query := "SELECT id, name, age FROM users ORDER BY id LIMIT $1 OFFSET $2"
 	rows, err := r.db.Query(context.Background(), query, limit, offset)
 	if err != nil {
@@ -28,7 +28,7 @@ func (r *UserRepo) GetAll(limit, offset int) ([]models.ResponseUser, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var user models.ResponseUser
+		var user entity.User
 		if err := rows.Scan(&user.ID, &user.Name, &user.Age); err != nil {
 			return nil, err
 		}
@@ -37,13 +37,13 @@ func (r *UserRepo) GetAll(limit, offset int) ([]models.ResponseUser, error) {
 	return users, nil
 }
 
-func (r *UserRepo) Create(user models.RequestUser) (string, error) {
+func (r *UserRepo) Create(user entity.User) (string, error) {
 	id := uuid.New().String()
 	_, err := r.db.Exec(context.Background(), "INSERT INTO users (id, name, age) VALUES ($1, $2, $3)", id, user.Name, user.Age)
 	return id, err
 }
 
-func (r *UserRepo) Update(user models.RequestUser) error {
+func (r *UserRepo) Update(user entity.User) error {
 	cmd, err := r.db.Exec(context.Background(), "UPDATE users SET name=$1, age=$2 WHERE id=$3", user.Name, user.Age, user.ID)
 	if err != nil || cmd.RowsAffected() == 0 {
 		return errors.New("not found or update failed")
@@ -51,8 +51,8 @@ func (r *UserRepo) Update(user models.RequestUser) error {
 	return nil
 }
 
-func (r *UserRepo) Get(id string) (models.ResponseUser, error) {
-	var user models.ResponseUser
+func (r *UserRepo) Get(id string) (entity.User, error) {
+	var user entity.User
 	err := r.db.QueryRow(context.Background(), "SELECT id, name, age FROM users WHERE id=$1", id).Scan(&user.ID, &user.Name, &user.Age)
 	return user, err
 }

@@ -2,10 +2,7 @@ package config
 
 import (
 	"fmt"
-	"log"
 	"os"
-
-	"github.com/joho/godotenv"
 )
 
 type DBConfig struct {
@@ -17,10 +14,6 @@ type DBConfig struct {
 }
 
 func LoadDBConfig() DBConfig {
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found, reading config from environment")
-	}
-
 	return DBConfig{
 		User:     os.Getenv("DB_USER"),
 		Password: os.Getenv("DB_PASSWORD"),

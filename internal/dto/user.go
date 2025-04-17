@@ -1,18 +1,17 @@
-package models
+package dto
 
-type UserDTO struct {
+type CreateUserRequest struct {
+	Name string `json:"name"`
+	Age  int    `json:"age"`
+}
+
+type UpdateUserRequest struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 	Age  int    `json:"age"`
 }
 
-type RequestUser struct {
-	ID   string `json:"id,omitempty"`
-	Name string `json:"name"`
-	Age  int    `json:"age"`
-}
-
-type ResponseUser struct {
+type UserResponse struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 	Age  int    `json:"age"`

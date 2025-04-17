@@ -3,7 +3,8 @@ package handler
 import (
 	"strconv"
 
-	"app/internal/models"
+	"app/internal/dto"
+	"app/internal/mapper"
 	"app/internal/usecase"
 
 	"github.com/gofiber/fiber/v2"
@@ -37,15 +38,17 @@ func (h *Handler) GetAllUsers(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.JSON(users)
+	return c.JSON(mapper.ToResponseList(users))
 }
 
 func (h *Handler) CreateUser(c *fiber.Ctx) error {
-	var req models.RequestUser
+	var req dto.CreateUserRequest
 	if err := c.BodyParser(&req); err != nil || req.Name == "" || req.Age <= 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
 	}
-	id, err := h.userUC.CreateUser(req)
+	user := mapper.ToEntityFromCreate(req)
+
+	id, err := h.userUC.CreateUser(user)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -53,15 +56,17 @@ func (h *Handler) CreateUser(c *fiber.Ctx) error {
 }
 
 func (h *Handler) UpdateUser(c *fiber.Ctx) error {
-	var req models.RequestUser
+	var req dto.UpdateUserRequest
 	if err := c.BodyParser(&req); err != nil || req.ID == "" || req.Name == "" || req.Age <= 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
 	}
-	err := h.userUC.UpdateUser(req)
+	user := mapper.ToEntityFromUpdate(req)
+
+	err := h.userUC.UpdateUser(user)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": err.Error()})
 	}
-	return c.JSON(fiber.Map{"id": req.ID})
+	return c.JSON(fiber.Map{"id": user.ID})
 }
 
 func (h *Handler) GetUser(c *fiber.Ctx) error {
@@ -70,7 +75,7 @@ func (h *Handler) GetUser(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
 	}
-	return c.JSON(user)
+	return c.JSON(mapper.ToResponse(user))
 }
 
 func (h *Handler) DeleteUser(c *fiber.Ctx) error {
