@@ -3,6 +3,7 @@ package app
 import (
 	"app/internal/config"
 	"app/internal/handler"
+	"app/internal/migration"
 	"app/internal/repository"
 	"app/internal/storage"
 	"app/internal/usecase"
@@ -13,6 +14,8 @@ func Run() error {
 	connStr := cfg.ConnString()
 	db := storage.GetConnect(connStr)
 	defer db.Close()
+
+	migration.RunMigrations(db)
 
 	userRepo := repository.NewUserRepo(db)
 	userUC := usecase.NewUserUsecase(userRepo)
