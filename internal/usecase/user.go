@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"app/internal/dto"
-	"app/internal/entity"
 	"app/internal/repository"
 )
 
@@ -14,7 +13,7 @@ func NewUserUsecase(repo *repository.UserRepo) *UserUsecase {
 	return &UserUsecase{userRepo: repo}
 }
 
-func (uc *UserUsecase) GetAllUsers(limit, offset int) ([]entity.User, error) {
+func (uc *UserUsecase) GetAllUsers(limit, offset int) ([]dto.UserResponse, error) {
 	return uc.userRepo.GetAll(limit, offset)
 }
 
@@ -22,11 +21,11 @@ func (uc *UserUsecase) CreateUser(user dto.CreateUserRequest) (string, error) {
 	return uc.userRepo.Create(user)
 }
 
-func (uc *UserUsecase) UpdateUser(user entity.User) error {
+func (uc *UserUsecase) UpdateUser(user dto.UpdateUserRequest) error {
 	return uc.userRepo.Update(user)
 }
 
-func (uc *UserUsecase) GetUser(id string) (entity.User, error) {
+func (uc *UserUsecase) GetUser(id string) (dto.UserResponse, error) {
 	return uc.userRepo.Get(id)
 }
 

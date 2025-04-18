@@ -22,11 +22,11 @@ func Run() error {
 	userHandler := handler.NewHandler(userUC)
 
 	app := GetRouter(
-		userHandler.GetAllUsers,
 		userHandler.CreateUser,
 		userHandler.UpdateUser,
 		userHandler.GetUser,
 		userHandler.DeleteUser,
+		userHandler.GetAllUsers,
 	)
 
 	return app.Listen(":8088")

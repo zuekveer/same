@@ -5,8 +5,8 @@ import (
 	"app/internal/entity"
 )
 
-func ToEntityFromCreate(req dto.CreateUserRequest) dto.CreateUserRequest {
-	return dto.CreateUserRequest{
+func ToEntityFromCreate(req dto.CreateUserRequest) entity.User {
+	return entity.User{
 		Name: req.Name,
 		Age:  req.Age,
 	}
