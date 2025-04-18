@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"strconv"
 
 	"app/internal/dto"
@@ -42,16 +43,25 @@ func (h *Handler) GetAllUsers(c *fiber.Ctx) error {
 }
 
 func (h *Handler) CreateUser(c *fiber.Ctx) error {
+	log.Println(">>> CreateUser handler called")
+
 	var req dto.CreateUserRequest
-	if err := c.BodyParser(&req); err != nil || req.Name == "" || req.Age <= 0 {
+	if err := c.BodyParser(&req); err != nil {
+		log.Println("Body parse error:", err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
 	}
+	log.Printf("Parsed request: %+v\n", req)
+
 	user := mapper.ToEntityFromCreate(req)
+	log.Printf("Mapped user entity: %+v\n", user)
 
 	id, err := h.userUC.CreateUser(user)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	log.Println("CreateUser usecase returned:", id, err)
+
+	if err != nil || id == "" {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create user"})
 	}
+
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"id": id})
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"app/internal/dto"
 	"app/internal/entity"
 
 	"github.com/google/uuid"
@@ -37,10 +38,26 @@ func (r *UserRepo) GetAll(limit, offset int) ([]entity.User, error) {
 	return users, nil
 }
 
-func (r *UserRepo) Create(user entity.User) (string, error) {
+func (r *UserRepo) Create(req dto.CreateUserRequest) (string, error) {
 	id := uuid.New().String()
-	_, err := r.db.Exec(context.Background(), "INSERT INTO users (id, name, age) VALUES ($1, $2, $3)", id, user.Name, user.Age)
-	return id, err
+
+	// data from DTO to Entity
+	user := entity.User{
+		ID:   id,
+		Name: req.Name,
+		Age:  req.Age,
+	}
+
+	// add data in db
+	cmdTag, err := r.db.Exec(context.Background(), "INSERT INTO users (id, name, age) VALUES ($1, $2, $3)", user.ID, user.Name, user.Age)
+	if err != nil {
+		return "", err
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return "", errors.New("user was not created")
+	}
+
+	return user.ID, nil
 }
 
 func (r *UserRepo) Update(user entity.User) error {
