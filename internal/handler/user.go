@@ -8,6 +8,7 @@ import (
 	"app/internal/usecase"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 )
 
 type Handler struct {
@@ -39,6 +40,11 @@ func (h *Handler) UpdateUser(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
 	}
+
+	if _, err := uuid.Parse(req.ID); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid UUID"})
+	}
+
 	err := h.userUC.UpdateUser(req)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": err.Error()})
@@ -60,6 +66,11 @@ func (h *Handler) GetAllUsers(c *fiber.Ctx) error {
 
 func (h *Handler) GetUser(c *fiber.Ctx) error {
 	id := c.Params("id")
+
+	if _, err := uuid.Parse(id); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid UUID"})
+	}
+
 	user, err := h.userUC.GetUser(id)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
@@ -69,6 +80,11 @@ func (h *Handler) GetUser(c *fiber.Ctx) error {
 
 func (h *Handler) DeleteUser(c *fiber.Ctx) error {
 	id := c.Params("id")
+
+	if _, err := uuid.Parse(id); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid UUID"})
+	}
+
 	err := h.userUC.DeleteUser(id)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
