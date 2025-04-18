@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"app/internal/dto"
+	"app/internal/mapper"
 	"app/internal/usecase"
 
 	"github.com/gofiber/fiber/v2"
@@ -23,7 +24,9 @@ func (h *Handler) CreateUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
 	}
 
-	id, err := h.userUC.CreateUser(req)
+	user := mapper.ToEntityFromCreate(req)
+
+	id, err := h.userUC.CreateUser(user)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -59,9 +62,9 @@ func (h *Handler) GetUser(c *fiber.Ctx) error {
 	id := c.Params("id")
 	user, err := h.userUC.GetUser(id)
 	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
 	}
-	return c.JSON(user)
+	return c.JSON(mapper.ToResponse(user))
 }
 
 func (h *Handler) DeleteUser(c *fiber.Ctx) error {

@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"app/internal/dto"
+	"app/internal/entity"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -37,15 +38,19 @@ func (r *UserRepo) GetAll(limit, offset int) ([]dto.UserResponse, error) {
 	return users, nil
 }
 
-func (r *UserRepo) Create(req dto.CreateUserRequest) (string, error) {
+func (r *UserRepo) Create(user entity.User) (string, error) {
 	id := uuid.New().String()
+	user.ID = id
 
-	_, err := r.db.Exec(context.Background(), "INSERT INTO users (id, name, age) VALUES ($1, $2, $3)", id, req.Name, req.Age)
+	_, err := r.db.Exec(context.Background(),
+		"INSERT INTO users (id, name, age) VALUES ($1, $2, $3)",
+		user.ID, user.Name, user.Age)
+
 	if err != nil {
 		return "", err
 	}
 
-	return id, nil
+	return user.ID, nil
 }
 
 func (r *UserRepo) Update(req dto.UpdateUserRequest) error {
@@ -56,12 +61,11 @@ func (r *UserRepo) Update(req dto.UpdateUserRequest) error {
 	return nil
 }
 
-func (r *UserRepo) Get(id string) (dto.UserResponse, error) {
-	var user dto.UserResponse
+func (r *UserRepo) Get(id string) (entity.User, error) {
+	var user entity.User
 	err := r.db.QueryRow(context.Background(),
-		"SELECT id, name, age FROM users WHERE id=$1", id,
-	).Scan(&user.ID, &user.Name, &user.Age)
-
+		"SELECT id, name, age FROM users WHERE id=$1", id).
+		Scan(&user.ID, &user.Name, &user.Age)
 	return user, err
 }
 
