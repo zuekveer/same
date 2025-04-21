@@ -4,8 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"app/internal/dto"
-	"app/internal/entity"
+	"app/internal/models"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -19,8 +18,8 @@ func NewUserRepo(db *pgxpool.Pool) *UserRepo {
 	return &UserRepo{db: db}
 }
 
-func (r *UserRepo) GetAll(limit, offset int) ([]dto.UserResponse, error) {
-	var users []dto.UserResponse
+func (r *UserRepo) GetAll(limit, offset int) ([]models.User, error) {
+	var users []models.User
 	query := "SELECT id, name, age FROM users ORDER BY id LIMIT $1 OFFSET $2"
 	rows, err := r.db.Query(context.Background(), query, limit, offset)
 	if err != nil {
@@ -29,7 +28,7 @@ func (r *UserRepo) GetAll(limit, offset int) ([]dto.UserResponse, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var user dto.UserResponse
+		var user models.User
 		if err := rows.Scan(&user.ID, &user.Name, &user.Age); err != nil {
 			return nil, err
 		}
@@ -38,7 +37,7 @@ func (r *UserRepo) GetAll(limit, offset int) ([]dto.UserResponse, error) {
 	return users, nil
 }
 
-func (r *UserRepo) Create(user entity.User) (string, error) {
+func (r *UserRepo) Create(user models.User) (string, error) {
 	id := uuid.New().String()
 	user.ID = id
 
@@ -53,24 +52,25 @@ func (r *UserRepo) Create(user entity.User) (string, error) {
 	return user.ID, nil
 }
 
-func (r *UserRepo) Update(req dto.UpdateUserRequest) error {
-	cmd, err := r.db.Exec(context.Background(), "UPDATE users SET name=$1, age=$2 WHERE id=$3", req.Name, req.Age, req.ID)
+func (r *UserRepo) Update(user models.User) error {
+	cmd, err := r.db.Exec(context.Background(),
+		"UPDATE users SET name=$1, age=$2 WHERE id=$3", user.Name, user.Age, user.ID)
 	if err != nil || cmd.RowsAffected() == 0 {
 		return errors.New("not found or update failed")
 	}
 	return nil
 }
 
-func (r *UserRepo) Get(id string) (entity.User, error) {
-	var user entity.User
+func (r *UserRepo) Get(id string) (models.User, error) {
+	var user models.User
 	err := r.db.QueryRow(context.Background(),
 		"SELECT id, name, age FROM users WHERE id=$1", id).
 		Scan(&user.ID, &user.Name, &user.Age)
 	return user, err
 }
 
-func (r *UserRepo) Delete(id string) error {
-	cmd, err := r.db.Exec(context.Background(), "DELETE FROM users WHERE id=$1", id)
+func (r *UserRepo) Delete(ctx context.Context, id string) error {
+	cmd, err := r.db.Exec(ctx, "DELETE FROM users WHERE id=$1", id)
 	if err != nil || cmd.RowsAffected() == 0 {
 		return errors.New("user not found")
 	}

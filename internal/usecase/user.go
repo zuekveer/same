@@ -1,8 +1,9 @@
 package usecase
 
 import (
-	"app/internal/dto"
-	"app/internal/entity"
+	"context"
+
+	"app/internal/models"
 	"app/internal/repository"
 )
 
@@ -14,22 +15,26 @@ func NewUserUsecase(repo *repository.UserRepo) *UserUsecase {
 	return &UserUsecase{userRepo: repo}
 }
 
-func (uc *UserUsecase) GetAllUsers(limit, offset int) ([]dto.UserResponse, error) {
-	return uc.userRepo.GetAll(limit, offset)
+func (uc *UserUsecase) GetAllUsers(limit, offset int) ([]models.UserResponse, error) {
+	users, err := uc.userRepo.GetAll(limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	return models.ToResponseList(users), nil
 }
 
-func (uc *UserUsecase) CreateUser(user entity.User) (string, error) {
+func (uc *UserUsecase) CreateUser(user models.User) (string, error) {
 	return uc.userRepo.Create(user)
 }
 
-func (uc *UserUsecase) UpdateUser(user dto.UpdateUserRequest) error {
+func (uc *UserUsecase) UpdateUser(user models.User) error {
 	return uc.userRepo.Update(user)
 }
 
-func (uc *UserUsecase) GetUser(id string) (entity.User, error) {
+func (uc *UserUsecase) GetUser(id string) (models.User, error) {
 	return uc.userRepo.Get(id)
 }
 
-func (uc *UserUsecase) DeleteUser(id string) error {
-	return uc.userRepo.Delete(id)
+func (uc *UserUsecase) DeleteUser(ctx context.Context, id string) error {
+	return uc.userRepo.Delete(ctx, id)
 }

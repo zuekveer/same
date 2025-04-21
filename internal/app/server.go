@@ -11,8 +11,7 @@ import (
 
 func Run() error {
 	cfg := config.LoadDBConfig()
-	connStr := cfg.ConnString()
-	db := storage.GetConnect(connStr)
+	db := storage.GetConnect(cfg.ConnString())
 	defer db.Close()
 
 	migration.RunMigrations(db)
