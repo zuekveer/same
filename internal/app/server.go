@@ -12,8 +12,8 @@ import (
 )
 
 func Run(ctx context.Context) error {
-	cfg := config.LoadDBConfig()
-	db := storage.GetConnect(ctx, cfg.ConnString())
+	cfg := config.LoadConfig()
+	db := storage.GetConnect(ctx, cfg.DB.ConnString())
 	defer db.Close()
 
 	migration.RunMigrations(db)
@@ -24,5 +24,5 @@ func Run(ctx context.Context) error {
 
 	app := getRouter(userHandler)
 
-	return app.Listen(":8088")
+	return app.Listen(cfg.App.Port)
 }

@@ -2,8 +2,15 @@ package config
 
 import (
 	"fmt"
-	"os"
+	"log"
+
+	"github.com/spf13/viper"
 )
+
+type Config struct {
+	DB  DBConfig
+	App AppConfig
+}
 
 type DBConfig struct {
 	User     string
@@ -13,16 +20,28 @@ type DBConfig struct {
 	Name     string
 }
 
-func LoadDBConfig() DBConfig {
-	return DBConfig{
-		User:     os.Getenv("DB_USER"),
-		Password: os.Getenv("DB_PASSWORD"),
-		Host:     os.Getenv("DB_HOST"),
-		Port:     os.Getenv("DB_PORT"),
-		Name:     os.Getenv("DB_NAME"),
-	}
+type AppConfig struct {
+	Port string
 }
 
-func (cfg DBConfig) ConnString() string {
-	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s", cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Name)
+func LoadConfig() Config {
+	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath(".")        // current dir
+	viper.AddConfigPath("./config") // fallback dir
+
+	if err := viper.ReadInConfig(); err != nil {
+		log.Fatalf("Error reading config file: %v", err)
+	}
+
+	var cfg Config
+	if err := viper.Unmarshal(&cfg); err != nil {
+		log.Fatalf("Unable to decode config into struct: %v", err)
+	}
+
+	return cfg
+}
+
+func (db DBConfig) ConnString() string {
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s", db.User, db.Password, db.Host, db.Port, db.Name)
 }
