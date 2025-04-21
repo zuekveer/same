@@ -13,29 +13,37 @@ type Config struct {
 }
 
 type DBConfig struct {
-	User     string
-	Password string
-	Host     string
-	Port     string
-	Name     string
+	User     string `mapstructure:"user"`
+	Password string `mapstructure:"password"`
+	Host     string `mapstructure:"host"`
+	Port     string `mapstructure:"port"`
+	Name     string `mapstructure:"name"`
 }
 
 type AppConfig struct {
-	Port string
+	Port string `mapstructure:"port"`
 }
 
 func LoadConfig() Config {
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")        // current dir
-	viper.AddConfigPath("./config") // fallback dir
+	v := viper.New()
 
-	if err := viper.ReadInConfig(); err != nil {
-		log.Fatalf("Error reading config file: %v", err)
+	v.SetConfigName("config")
+	v.SetConfigType("yaml")
+	v.AddConfigPath(".")
+	v.AddConfigPath("./config")
+	if err := v.ReadInConfig(); err != nil {
+		log.Fatalf("Error reading config.yaml: %v", err)
 	}
 
+	v.SetConfigFile(".env")
+	if err := v.MergeInConfig(); err != nil {
+		log.Println("No .env file found or failed to merge, using only config.yaml")
+	}
+
+	v.AutomaticEnv()
+
 	var cfg Config
-	if err := viper.Unmarshal(&cfg); err != nil {
+	if err := v.Unmarshal(&cfg); err != nil {
 		log.Fatalf("Unable to decode config into struct: %v", err)
 	}
 
