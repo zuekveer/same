@@ -12,7 +12,15 @@ import (
 )
 
 type Handler struct {
-	userUC *usecase.UserUsecase
+	userUC usecase.UserProvider
+}
+
+type UserHandler interface {
+	CreateUser(c *fiber.Ctx) error
+	UpdateUser(c *fiber.Ctx) error
+	GetUser(c *fiber.Ctx) error
+	DeleteUser(c *fiber.Ctx) error
+	GetAllUsers(c *fiber.Ctx) error
 }
 
 func NewHandler(userUC *usecase.UserUsecase) *Handler {

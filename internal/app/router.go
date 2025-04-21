@@ -1,23 +1,19 @@
 package app
 
 import (
+	"app/internal/handler"
+
 	"github.com/gofiber/fiber/v2"
 )
 
-func GetRouter(
-	createUser fiber.Handler,
-	updateUser fiber.Handler,
-	getUser fiber.Handler,
-	deleteUser fiber.Handler,
-	getAllUsers fiber.Handler,
-) *fiber.App {
+func getRouter(h handler.UserHandler) *fiber.App {
 	app := fiber.New()
 
-	app.Post("/user", createUser)
-	app.Put("/user", updateUser)
-	app.Get("/user/:id", getUser)
-	app.Delete("/user/:id", deleteUser)
-	app.Get("/users", getAllUsers)
+	app.Post("/user", h.CreateUser)
+	app.Put("/user", h.UpdateUser)
+	app.Get("/user/:id", h.GetUser)
+	app.Delete("/user/:id", h.DeleteUser)
+	app.Get("/users", h.GetAllUsers)
 
 	return app
 }

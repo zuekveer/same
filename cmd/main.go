@@ -1,15 +1,18 @@
 package main
 
 import (
-	"log"
+	"context"
 	"os"
 
 	"app/internal/app"
+	"app/internal/logger"
 )
 
 func main() {
-	if err := app.Run(); err != nil {
-		log.Println("Server failed:", err)
+	logger.Init()
+
+	if err := app.Run(context.Background()); err != nil {
+		logger.Logger.Error("Server failed", "error", err)
 		os.Exit(1)
 	}
 }

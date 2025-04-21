@@ -7,11 +7,19 @@ import (
 	"app/internal/models"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type UserRepo struct {
 	db *pgxpool.Pool
+}
+
+type UserProvider interface {
+	Create(user models.User) (string, error)
+	Update(user models.User) error
+	Get(id string) (models.User, error)
+	Delete(cxt context.Context, id string) error
+	GetAll(limit, offset int) ([]models.User, error)
 }
 
 func NewUserRepo(db *pgxpool.Pool) *UserRepo {

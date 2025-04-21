@@ -1,6 +1,8 @@
 package app
 
 import (
+	"context"
+
 	"app/internal/config"
 	"app/internal/handler"
 	"app/internal/migration"
@@ -9,9 +11,9 @@ import (
 	"app/internal/usecase"
 )
 
-func Run() error {
+func Run(ctx context.Context) error {
 	cfg := config.LoadDBConfig()
-	db := storage.GetConnect(cfg.ConnString())
+	db := storage.GetConnect(ctx, cfg.ConnString())
 	defer db.Close()
 
 	migration.RunMigrations(db)
@@ -20,13 +22,7 @@ func Run() error {
 	userUC := usecase.NewUserUsecase(userRepo)
 	userHandler := handler.NewHandler(userUC)
 
-	app := GetRouter(
-		userHandler.CreateUser,
-		userHandler.UpdateUser,
-		userHandler.GetUser,
-		userHandler.DeleteUser,
-		userHandler.GetAllUsers,
-	)
+	app := getRouter(userHandler)
 
 	return app.Listen(":8088")
 }

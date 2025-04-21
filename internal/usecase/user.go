@@ -8,10 +8,18 @@ import (
 )
 
 type UserUsecase struct {
-	userRepo *repository.UserRepo
+	userRepo repository.UserProvider
 }
 
-func NewUserUsecase(repo *repository.UserRepo) *UserUsecase {
+type UserProvider interface {
+	CreateUser(user models.User) (string, error)
+	UpdateUser(user models.User) error
+	GetUser(id string) (models.User, error)
+	DeleteUser(ctx context.Context, id string) error
+	GetAllUsers(limit, offset int) ([]models.UserResponse, error)
+}
+
+func NewUserUsecase(repo repository.UserProvider) *UserUsecase {
 	return &UserUsecase{userRepo: repo}
 }
 
