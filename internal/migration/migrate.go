@@ -2,7 +2,7 @@ package migration
 
 import (
 	"context"
-	"log"
+	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -15,13 +15,14 @@ CREATE TABLE IF NOT EXISTS users (
 );
 `
 
-func RunMigrations(db *pgxpool.Pool) {
-	log.Println("Running migrations...")
+func RunMigrations(db *pgxpool.Pool) error {
+	fmt.Println("Running migrations...")
 
 	_, err := db.Exec(context.Background(), createUsersTable)
 	if err != nil {
-		log.Fatalf("Migration failed: %v", err)
+		return fmt.Errorf("migration failed: %w", err)
 	}
 
-	log.Println("Migrations completed.")
+	fmt.Println("Migrations completed.")
+	return nil
 }

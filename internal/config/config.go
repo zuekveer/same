@@ -2,14 +2,15 @@ package config
 
 import (
 	"fmt"
-	"log"
+
+	"app/internal/logger"
 
 	"github.com/spf13/viper"
 )
 
 type Config struct {
-	DB  DBConfig
-	App AppConfig
+	DB  DBConfig  `mapstructure:"db"`
+	App AppConfig `mapstructure:"app"`
 }
 
 type DBConfig struct {
@@ -31,20 +32,23 @@ func LoadConfig() Config {
 	v.SetConfigType("yaml")
 	v.AddConfigPath(".")
 	v.AddConfigPath("./config")
+	v.AddConfigPath("./internal/config")
+	v.AddConfigPath("/app/internal/config")
+
 	if err := v.ReadInConfig(); err != nil {
-		log.Fatalf("Error reading config.yaml: %v", err)
+		logger.Logger.Info("Warning: could not read config.yaml: %v", err)
 	}
 
 	v.SetConfigFile(".env")
 	if err := v.MergeInConfig(); err != nil {
-		log.Println("No .env file found or failed to merge, using only config.yaml")
+		logger.Logger.Info("No .env file found or failed to merge .env")
 	}
 
 	v.AutomaticEnv()
 
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {
-		log.Fatalf("Unable to decode config into struct: %v", err)
+		logger.Logger.Warn("Unable to decode config into struct: %v", err)
 	}
 
 	return cfg
