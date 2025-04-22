@@ -96,20 +96,26 @@ func (r *UserRepo) Get(id string) (models.User, error) {
 func (r *UserRepo) Update(user models.User) error {
 	cmd, err := r.db.Exec(context.Background(),
 		"UPDATE users SET name=$1, age=$2 WHERE id=$3", user.Name, user.Age, user.ID)
-	if err != nil || cmd.RowsAffected() == 0 {
-		err := fmt.Errorf("not found or update failed: %w", err)
-		logger.Logger.Error("Update: User update failed", "error", err)
-		return fmt.Errorf("update failed: %w", err)
+	if err != nil {
+		logger.Logger.Error("Update: DB error", "error", err)
+		return fmt.Errorf("update query failed: %w", err)
+	}
+	if cmd.RowsAffected() == 0 {
+		logger.Logger.Warn("Update: User not found", "userID", user.ID)
+		return ErrNotFound
 	}
 	return nil
 }
 
 func (r *UserRepo) Delete(ctx context.Context, id string) error {
 	cmd, err := r.db.Exec(ctx, "DELETE FROM users WHERE id=$1", id)
-	if err != nil || cmd.RowsAffected() == 0 {
-		err := fmt.Errorf("user not found: %w", err)
-		logger.Logger.Error("Delete: User not found", "error", err)
-		return fmt.Errorf("user not found: %w", err)
+	if err != nil {
+		logger.Logger.Error("Delete: DB error", "error", err)
+		return fmt.Errorf("delete query failed: %w", err)
+	}
+	if cmd.RowsAffected() == 0 {
+		logger.Logger.Warn("Delete: User not found", "userID", id)
+		return ErrNotFound
 	}
 	return nil
 }
