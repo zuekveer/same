@@ -2,8 +2,9 @@ package repository
 
 import (
 	"context"
-	"errors"
+	"fmt"
 
+	"app/internal/logger"
 	"app/internal/models"
 
 	"github.com/google/uuid"
@@ -31,14 +32,16 @@ func (r *UserRepo) GetAll(limit, offset int) ([]models.User, error) {
 	query := "SELECT id, name, age FROM users ORDER BY id LIMIT $1 OFFSET $2"
 	rows, err := r.db.Query(context.Background(), query, limit, offset)
 	if err != nil {
-		return nil, err
+		logger.Logger.Error("GetAll: Database query failed", "error", err)
+		return nil, fmt.Errorf("failed to query users: %w", err)
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		var user models.User
 		if err := rows.Scan(&user.ID, &user.Name, &user.Age); err != nil {
-			return nil, err
+			logger.Logger.Error("GetAll: Row scan failed", "error", err)
+			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 		users = append(users, user)
 	}
@@ -54,7 +57,8 @@ func (r *UserRepo) Create(user models.User) (string, error) {
 		user.ID, user.Name, user.Age)
 
 	if err != nil {
-		return "", err
+		logger.Logger.Error("Create: Database insert failed", "error", err)
+		return "", fmt.Errorf("failed to create user: %w", err)
 	}
 
 	return user.ID, nil
@@ -64,7 +68,9 @@ func (r *UserRepo) Update(user models.User) error {
 	cmd, err := r.db.Exec(context.Background(),
 		"UPDATE users SET name=$1, age=$2 WHERE id=$3", user.Name, user.Age, user.ID)
 	if err != nil || cmd.RowsAffected() == 0 {
-		return errors.New("not found or update failed")
+		err := fmt.Errorf("not found or update failed: %w", err)
+		logger.Logger.Error("Update: User update failed", "error", err)
+		return fmt.Errorf("update failed: %w", err)
 	}
 	return nil
 }
@@ -74,13 +80,19 @@ func (r *UserRepo) Get(id string) (models.User, error) {
 	err := r.db.QueryRow(context.Background(),
 		"SELECT id, name, age FROM users WHERE id=$1", id).
 		Scan(&user.ID, &user.Name, &user.Age)
-	return user, err
+	if err != nil {
+		logger.Logger.Error("Get: User not found", "error", err)
+		return user, fmt.Errorf("user not found: %w", err)
+	}
+	return user, nil
 }
 
 func (r *UserRepo) Delete(ctx context.Context, id string) error {
 	cmd, err := r.db.Exec(ctx, "DELETE FROM users WHERE id=$1", id)
 	if err != nil || cmd.RowsAffected() == 0 {
-		return errors.New("user not found")
+		err := fmt.Errorf("user not found: %w", err)
+		logger.Logger.Error("Delete: User not found", "error", err)
+		return fmt.Errorf("user not found: %w", err)
 	}
 	return nil
 }
