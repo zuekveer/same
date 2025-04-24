@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"app/internal/cache"
 	"app/internal/config"
 	"app/internal/database"
 	"app/internal/handler"
@@ -31,9 +32,9 @@ func Run(ctx context.Context) error {
 	logger.Logger.Info("Connected to database")
 
 	userRepo := repository.NewUserRepo(db)
-	userUC := usecase.NewUserUsecase(userRepo)
+	userCachedRepo := cache.NewDecorator(userRepo)
+	userUC := usecase.NewUserUsecase(userCachedRepo)
 	userHandler := handler.NewHandler(userUC)
-
 	app := getRouter(userHandler)
 
 	logger.Logger.Info("Starting server", "port", cfg.App.Port)
