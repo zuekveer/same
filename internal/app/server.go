@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"app/database"
 	"app/internal/cache"
 	"app/internal/config"
-	"app/internal/database"
 	"app/internal/handler"
 	"app/internal/logger"
 	"app/internal/repository"

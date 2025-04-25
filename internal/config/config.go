@@ -1,6 +1,8 @@
 package config
 
 import (
+	"bytes"
+	"embed"
 	"fmt"
 
 	"app/internal/logger"
@@ -8,43 +10,38 @@ import (
 	"github.com/spf13/viper"
 )
 
+//go:embed config.yaml
+var embeddedConfig embed.FS
+
 type Config struct {
-	DB  DBConfig  `mapstructure:"db"`
-	App AppConfig `mapstructure:"app"`
+	DB  DBConfig
+	App AppConfig
 }
 
 type DBConfig struct {
-	User     string `mapstructure:"user"`
-	Password string `mapstructure:"password"`
-	Host     string `mapstructure:"host"`
-	Port     string `mapstructure:"port"`
-	Name     string `mapstructure:"name"`
+	User     string
+	Password string
+	Host     string
+	Port     string
+	Name     string
 }
 
 type AppConfig struct {
-	Port string `mapstructure:"port"`
+	Port string
 }
 
 func LoadConfig() Config {
 	v := viper.New()
 
-	v.SetConfigName("config")
-	v.SetConfigType("yaml")
-	v.AddConfigPath(".")
-	v.AddConfigPath("./config")
-	v.AddConfigPath("./internal/config")
-	v.AddConfigPath("/app/internal/config")
-
-	if err := v.ReadInConfig(); err != nil {
-		logger.Logger.Info("Warning: could not read config.yaml: %v", err)
+	content, err := embeddedConfig.ReadFile("config.yaml")
+	if err != nil {
+		logger.Logger.Warn("Failed to read embedded config.yaml: %v", err)
+	} else {
+		v.SetConfigType("yaml")
+		if err := v.ReadConfig(bytes.NewBuffer(content)); err != nil {
+			logger.Logger.Warn("Failed to load embedded config.yaml: %v", err)
+		}
 	}
-
-	v.SetConfigFile(".env")
-	if err := v.MergeInConfig(); err != nil {
-		logger.Logger.Info("No .env file found or failed to merge .env")
-	}
-
-	v.AutomaticEnv()
 
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {

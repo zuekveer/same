@@ -4,8 +4,7 @@ services:
     env_file:
       - .env
     ports:
-      - "8088:8088"
-    restart: on-failure
+      - "${APP_PORT}:${APP_PORT}"
     depends_on:
         postgres:
           condition: service_healthy

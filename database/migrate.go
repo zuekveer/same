@@ -5,9 +5,8 @@ import (
 	"embed"
 	"log/slog"
 
-	// Import for side effects - needed for initializing the PostgresSQL driver
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/pkg/errors" //should I use public archived version?
+	"github.com/pkg/errors"
 	"github.com/pressly/goose/v3"
 )
 

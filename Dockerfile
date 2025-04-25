@@ -11,11 +11,5 @@ FROM alpine:3.20.2
 
 WORKDIR /app/
 COPY --from=builder /app/application .
-COPY --from=builder /go/bin/goose /usr/local/bin/goose
-
-COPY internal/database/migrations /app/internal/database/migrations
-
-COPY internal/config/config.yaml /app/internal/config/config.yaml
-COPY .env /app/.env
 
 CMD ["./application"]
