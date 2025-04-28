@@ -22,33 +22,33 @@ func NewDecorator(repo repository.UserProvider) *Decorator {
 	}
 }
 
-func (c *Decorator) Get(id string) (models.User, error) {
+func (c *Decorator) Get(id string) (*models.User, error) {
 	c.mu.RLock()
 	user, ok := c.data[id]
 	c.mu.RUnlock()
 	if ok {
 		logger.Logger.Info("Cache hit", "userID", id)
-		return user, nil
+		return &user, nil
 	}
 
 	user, err := c.repo.Get(id)
 	if err != nil {
-		return user, err
+		return nil, err
 	}
 
 	c.mu.Lock()
 	c.data[id] = user
 	c.mu.Unlock()
 	logger.Logger.Info("Cache miss - loaded from repo", "userID", id)
-	return user, nil
+	return &user, nil
 }
 
-func (c *Decorator) GetAll(limit, offset int) ([]models.User, error) {
+func (c *Decorator) GetAll(limit, offset int) ([]*models.User, error) {
 	return c.repo.GetAll(limit, offset)
 }
 
 func (c *Decorator) Create(user models.User) (string, error) {
-	id, err := c.repo.Create(user)
+	id, err := c.repo.Create(&user)
 	if err == nil {
 		c.mu.Lock()
 		user.ID = id
@@ -58,11 +58,11 @@ func (c *Decorator) Create(user models.User) (string, error) {
 	return id, err
 }
 
-func (c *Decorator) Update(user models.User) error {
+func (c *Decorator) Update(user *models.User) error {
 	err := c.repo.Update(user)
 	if err == nil {
 		c.mu.Lock()
-		c.data[user.ID] = user
+		c.data[user.ID] = *user
 		c.mu.Unlock()
 	}
 	return err

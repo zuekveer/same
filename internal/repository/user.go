@@ -22,11 +22,11 @@ type UserRepo struct {
 }
 
 type UserProvider interface {
-	Create(user models.User) (string, error)
-	Update(user models.User) error
-	Get(id string) (models.User, error)
+	Create(user *models.User) (string, error)
+	Update(user *models.User) error
+	Get(id string) (*models.User, error)
 	Delete(cxt context.Context, id string) error
-	GetAll(limit, offset int) ([]models.User, error)
+	GetAll(limit, offset int) ([]*models.User, error)
 }
 
 func NewUserRepo(db *pgxpool.Pool) *UserRepo {
@@ -60,7 +60,7 @@ func (r *UserRepo) GetAll(limit, offset int) ([]models.User, error) {
 	return users, nil
 }
 
-func (r *UserRepo) Create(user models.User) (string, error) {
+func (r *UserRepo) Create(user *models.User) (string, error) {
 	id := uuid.New().String()
 	user.ID = id
 
@@ -77,7 +77,7 @@ func (r *UserRepo) Create(user models.User) (string, error) {
 	return user.ID, nil
 }
 
-func (r *UserRepo) Get(id string) (models.User, error) {
+func (r *UserRepo) Get(id string) (*models.User, error) {
 	var user models.User
 	err := r.db.QueryRow(context.Background(),
 		"SELECT id, name, age FROM users WHERE id=$1", id).
@@ -85,15 +85,15 @@ func (r *UserRepo) Get(id string) (models.User, error) {
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			logger.Logger.Error("Get: User not found", "id", id, "error", err)
-			return user, fmt.Errorf("Get user %s: %w", id, ErrNotFound)
+			return &user, fmt.Errorf("Get user %s: %w", id, ErrNotFound)
 		}
 		logger.Logger.Error("Get: Database query failed", "id", id, "error", err)
-		return user, fmt.Errorf("failed to query user %s: %w", id, err)
+		return &user, fmt.Errorf("failed to query user %s: %w", id, err)
 	}
-	return user, nil
+	return &user, nil
 }
 
-func (r *UserRepo) Update(user models.User) error {
+func (r *UserRepo) Update(user *models.User) error {
 	cmd, err := r.db.Exec(context.Background(),
 		"UPDATE users SET name=$1, age=$2 WHERE id=$3", user.Name, user.Age, user.ID)
 	if err != nil {
