@@ -6,10 +6,12 @@ import (
 
 	"app/internal/logger"
 	"app/internal/models"
+	"app/internal/repository"
 	"app/internal/usecase"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
 )
 
 type UserHandler interface {
@@ -59,8 +61,12 @@ func (h *Handler) UpdateUser(c *fiber.Ctx) error {
 
 	user := models.ToEntityFromUpdate(req)
 	if err := h.userUC.UpdateUser(user); err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			logger.Logger.Warn("UpdateUser: User not found", "id", req.ID)
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
+		}
 		logger.Logger.Error("UpdateUser: Failed to update user", "id", req.ID, "error", err)
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Internal server error"})
 	}
 
 	logger.Logger.Info("UpdateUser: User updated", "id", req.ID)
@@ -76,8 +82,12 @@ func (h *Handler) GetUser(c *fiber.Ctx) error {
 
 	user, err := h.userUC.GetUser(id)
 	if err != nil {
-		logger.Logger.Error("GetUser: User not found", "id", id, "error", err)
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
+		if errors.Is(err, repository.ErrNotFound) {
+			logger.Logger.Warn("GetUser: User not found", "id", id)
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
+		}
+		logger.Logger.Error("GetUser: Failed to get user", "id", id, "error", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Internal server error"})
 	}
 
 	logger.Logger.Info("GetUser: User found", "id", id)
@@ -92,8 +102,12 @@ func (h *Handler) DeleteUser(c *fiber.Ctx) error {
 	}
 
 	if err := h.userUC.DeleteUser(context.Background(), id); err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			logger.Logger.Warn("DeleteUser: User not found", "id", id)
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
+		}
 		logger.Logger.Error("DeleteUser: Failed to delete user", "id", id, "error", err)
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Internal server error"})
 	}
 
 	logger.Logger.Info("DeleteUser: User deleted", "id", id)
