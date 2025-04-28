@@ -38,18 +38,18 @@ func ToEntityFromUpdate(req UpdateUserRequest) User {
 	}
 }
 
-func ToResponse(user User) UserResponse {
+func (u User) ToResponse() UserResponse {
 	return UserResponse{
-		ID:   user.ID,
-		Name: user.Name,
-		Age:  user.Age,
+		ID:   u.ID,
+		Name: u.Name,
+		Age:  u.Age,
 	}
 }
 
 func ToResponseList(users []User) []UserResponse {
-	var res []UserResponse
-	for _, u := range users {
-		res = append(res, ToResponse(u))
+	res := make([]UserResponse, len(users))
+	for i, u := range users {
+		res[i] = u.ToResponse()
 	}
 	return res
 }
