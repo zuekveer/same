@@ -2,7 +2,9 @@ package handler
 
 import (
 	"context"
+	"net/http"
 	"strconv"
+	"time"
 
 	"app/internal/logger"
 	"app/internal/models"
@@ -12,6 +14,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type UserHandler interface {
@@ -23,11 +27,52 @@ type UserHandler interface {
 }
 
 type Handler struct {
-	userUC usecase.UserProvider
+	userUC              usecase.UserProvider
+	httpRequestDuration *prometheus.HistogramVec
+	requestCount        *prometheus.CounterVec
 }
 
-func NewHandler(userUC usecase.UserProvider) UserHandler {
-	return &Handler{userUC: userUC}
+func NewHandler(userUC *usecase.UserUsecase) *Handler {
+	histogram := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "http_request_duration_seconds",
+			Help:    "Histogram of HTTP request durations",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"method", "handler", "status_code"},
+	)
+	prometheus.MustRegister(histogram)
+
+	counter := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "http_request_count",
+			Help: "Total number of HTTP requests processed",
+		},
+		[]string{"method", "handler", "status_code"},
+	)
+	prometheus.MustRegister(counter)
+
+	return &Handler{
+		userUC:              userUC,
+		httpRequestDuration: histogram,
+		requestCount:        counter,
+	}
+}
+
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	statusCode := http.StatusOK
+
+	w.WriteHeader(statusCode)
+
+	duration := time.Since(start).Seconds()
+
+	h.httpRequestDuration.WithLabelValues(r.Method, r.URL.Path, http.StatusText(statusCode)).Observe(duration)
+	h.requestCount.WithLabelValues(r.Method, r.URL.Path, http.StatusText(statusCode)).Inc()
+}
+
+func MetricsHandler() http.Handler {
+	return promhttp.Handler()
 }
 
 func (h *Handler) CreateUser(c *fiber.Ctx) error {

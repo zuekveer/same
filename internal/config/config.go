@@ -14,8 +14,9 @@ import (
 var embeddedConfig embed.FS
 
 type Config struct {
-	DB  DBConfig
-	App AppConfig
+	DB      DBConfig
+	App     AppConfig
+	Metrics MetricsConfig
 }
 
 type DBConfig struct {
@@ -30,7 +31,11 @@ type AppConfig struct {
 	Port string
 }
 
-func LoadConfig() Config {
+type MetricsConfig struct {
+	Port string
+}
+
+func LoadConfig() (Config, error) {
 	v := viper.New()
 
 	content, err := embeddedConfig.ReadFile("config.yaml")
@@ -43,12 +48,14 @@ func LoadConfig() Config {
 		}
 	}
 
+	v.AutomaticEnv()
+
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {
 		logger.Logger.Warn("Unable to decode config into struct: %v", err)
 	}
 
-	return cfg
+	return cfg, nil
 }
 
 func (db DBConfig) ConnString() string {

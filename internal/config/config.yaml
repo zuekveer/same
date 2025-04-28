@@ -1,6 +1,9 @@
 app:
   port: "8088"
 
+metrics:
+  port: "8082"
+
 db:
   user: "postgres"
   password: "postgres"

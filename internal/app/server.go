@@ -13,6 +13,7 @@ import (
 	"app/internal/config"
 	"app/internal/handler"
 	"app/internal/logger"
+	"app/internal/metrics"
 	"app/internal/repository"
 	"app/internal/storage"
 	"app/internal/usecase"
@@ -21,7 +22,11 @@ import (
 func Run(ctx context.Context) error {
 	logger.Logger.Info("Starting application")
 
-	cfg := config.LoadConfig()
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		logger.Logger.Error("Failed to load config", "error", err)
+		return fmt.Errorf("failed to load config: %w", err)
+	}
 
 	logger.Logger.Info("Running migrations...", "dsn", cfg.DB.ConnString())
 	if err := database.Migrate(cfg.DB.ConnString()); err != nil {
@@ -48,6 +53,9 @@ func Run(ctx context.Context) error {
 	defer shutdownCancel()
 
 	go userCachedRepo.CleanupExpiredLoop(shutdownCtx)
+
+	metricsServer := metrics.NewMetrics()
+	go metrics.RunMetricsServer(shutdownCtx, cfg.Metrics.Port, metricsServer.Registry())
 
 	go func() {
 		sigCh := make(chan os.Signal, 1)
