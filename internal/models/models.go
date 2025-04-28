@@ -1,9 +1,9 @@
 package models
 
 type User struct {
-	ID   string
-	Name string
-	Age  int
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Age  int    `json:"age"`
 }
 
 type CreateUserRequest struct {
@@ -46,7 +46,7 @@ func (u User) ToResponse() UserResponse {
 	}
 }
 
-func ToResponseList(users []User) []UserResponse {
+func ToResponseList(users []*User) []UserResponse {
 	res := make([]UserResponse, len(users))
 	for i, u := range users {
 		res[i] = u.ToResponse()

@@ -38,7 +38,7 @@ func (h *Handler) CreateUser(c *fiber.Ctx) error {
 	}
 
 	user := models.ToEntityFromCreate(req)
-	id, err := h.userUC.CreateUser(user)
+	id, err := h.userUC.CreateUser(&user)
 	if err != nil {
 		logger.Logger.Error("CreateUser: Failed to create user", "user", user, "error", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
@@ -60,7 +60,7 @@ func (h *Handler) UpdateUser(c *fiber.Ctx) error {
 	}
 
 	user := models.ToEntityFromUpdate(req)
-	if err := h.userUC.UpdateUser(user); err != nil {
+	if err := h.userUC.UpdateUser(&user); err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
 			logger.Logger.Warn("UpdateUser: User not found", "id", req.ID)
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
@@ -91,7 +91,7 @@ func (h *Handler) GetUser(c *fiber.Ctx) error {
 	}
 
 	logger.Logger.Info("GetUser: User found", "id", id)
-	return c.JSON(models.ToResponse(user))
+	return c.JSON(user.ToResponse())
 }
 
 func (h *Handler) DeleteUser(c *fiber.Ctx) error {

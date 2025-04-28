@@ -12,9 +12,9 @@ type UserUsecase struct {
 }
 
 type UserProvider interface {
-	CreateUser(user models.User) (string, error)
-	UpdateUser(user models.User) error
-	GetUser(id string) (models.User, error)
+	CreateUser(user *models.User) (string, error)
+	UpdateUser(user *models.User) error
+	GetUser(id string) (*models.User, error)
 	DeleteUser(ctx context.Context, id string) error
 	GetAllUsers(limit, offset int) ([]models.UserResponse, error)
 }
@@ -28,18 +28,19 @@ func (uc *UserUsecase) GetAllUsers(limit, offset int) ([]models.UserResponse, er
 	if err != nil {
 		return nil, err
 	}
+
 	return models.ToResponseList(users), nil
 }
 
-func (uc *UserUsecase) CreateUser(user models.User) (string, error) {
+func (uc *UserUsecase) CreateUser(user *models.User) (string, error) {
 	return uc.userRepo.Create(user)
 }
 
-func (uc *UserUsecase) UpdateUser(user models.User) error {
+func (uc *UserUsecase) UpdateUser(user *models.User) error {
 	return uc.userRepo.Update(user)
 }
 
-func (uc *UserUsecase) GetUser(id string) (models.User, error) {
+func (uc *UserUsecase) GetUser(id string) (*models.User, error) {
 	return uc.userRepo.Get(id)
 }
 

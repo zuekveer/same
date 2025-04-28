@@ -3,6 +3,10 @@ package app
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"app/database"
 	"app/internal/cache"
@@ -31,11 +35,26 @@ func Run(ctx context.Context) error {
 	defer db.Close()
 	logger.Logger.Info("Connected to database")
 
+	expirationDuration := 10 * time.Minute
+	cleanupInterval := 5 * time.Minute
+
 	userRepo := repository.NewUserRepo(db)
-	userCachedRepo := cache.NewDecorator(userRepo)
+	userCachedRepo := cache.NewDecorator(userRepo, expirationDuration, cleanupInterval)
 	userUC := usecase.NewUserUsecase(userCachedRepo)
 	userHandler := handler.NewHandler(userUC)
 	app := getRouter(userHandler)
+
+	shutdownCtx, shutdownCancel := context.WithCancel(ctx)
+	defer shutdownCancel()
+
+	go userCachedRepo.CleanupExpiredLoop(shutdownCtx)
+
+	go func() {
+		sigCh := make(chan os.Signal, 1)
+		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+		<-sigCh
+		shutdownCancel()
+	}()
 
 	logger.Logger.Info("Starting server", "port", cfg.App.Port)
 	if err := app.Listen(":" + cfg.App.Port); err != nil {
@@ -43,6 +62,8 @@ func Run(ctx context.Context) error {
 		return fmt.Errorf("failed to start server on port %s: %w", cfg.App.Port, err)
 	}
 
-	logger.Logger.Info("Server started successfully", "port", cfg.App.Port)
+	<-shutdownCtx.Done()
+
+	logger.Logger.Info("Server shutdown gracefully")
 	return nil
 }

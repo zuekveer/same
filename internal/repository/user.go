@@ -33,8 +33,8 @@ func NewUserRepo(db *pgxpool.Pool) *UserRepo {
 	return &UserRepo{db: db}
 }
 
-func (r *UserRepo) GetAll(limit, offset int) ([]models.User, error) {
-	var users []models.User
+func (r *UserRepo) GetAll(limit, offset int) ([]*models.User, error) {
+	var users []*models.User
 	query := "SELECT id, name, age FROM users ORDER BY id LIMIT $1 OFFSET $2"
 	rows, err := r.db.Query(context.Background(), query, limit, offset)
 	if err != nil {
@@ -44,7 +44,7 @@ func (r *UserRepo) GetAll(limit, offset int) ([]models.User, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var user models.User
+		user := &models.User{}
 		if err := rows.Scan(&user.ID, &user.Name, &user.Age); err != nil {
 			logger.Logger.Error("GetAll: Failed to scan row", "error", err)
 			return nil, fmt.Errorf("failed to scan row: %w", err)

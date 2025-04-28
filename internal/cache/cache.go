@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"sync"
+	"time"
 
 	"app/internal/logger"
 	"app/internal/models"
@@ -10,31 +11,43 @@ import (
 )
 
 type Decorator struct {
-	repo repository.UserProvider
-	mu   sync.RWMutex
-	data map[string]*models.User
+	repo               repository.UserProvider
+	mu                 sync.RWMutex
+	data               map[string]*cacheEntry
+	expirationDuration time.Duration
+	cleanupInterval    time.Duration
 }
 
-func NewDecorator(repo repository.UserProvider) *Decorator {
+type cacheEntry struct {
+	user      *models.User
+	expiredAt time.Time
+}
+
+func NewDecorator(repo repository.UserProvider, expirationDuration, cleanupInterval time.Duration) *Decorator {
 	return &Decorator{
-		repo: repo,
-		data: make(map[string]*models.User),
+		repo:               repo,
+		data:               make(map[string]*cacheEntry),
+		expirationDuration: expirationDuration,
+		cleanupInterval:    cleanupInterval,
 	}
 }
 
 func (c *Decorator) Set(user *models.User) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.data[user.ID] = user
+	c.data[user.ID] = &cacheEntry{
+		user:      user,
+		expiredAt: time.Now().Add(c.expirationDuration),
+	}
 }
 
 func (c *Decorator) Get(id string) (*models.User, error) {
 	c.mu.RLock()
-	user, ok := c.data[id]
+	entry, ok := c.data[id]
 	c.mu.RUnlock()
-	if ok {
+	if ok && time.Now().Before(entry.expiredAt) {
 		logger.Logger.Info("Cache hit", "userID", id)
-		return user, nil
+		return entry.user, nil
 	}
 
 	userFromRepo, err := c.repo.Get(id)
@@ -45,6 +58,35 @@ func (c *Decorator) Get(id string) (*models.User, error) {
 	c.Set(userFromRepo)
 	logger.Logger.Info("Cache miss - loaded from repo", "userID", id)
 	return userFromRepo, nil
+}
+
+func (c *Decorator) CleanupExpiredLoop(ctx context.Context) {
+	ticker := time.NewTicker(c.cleanupInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			logger.Logger.Info("Cleaning expired cache entries...")
+			c.cleanupExpiredCache()
+		case <-ctx.Done():
+			logger.Logger.Info("Cache cleanup loop shutting down")
+			return
+		}
+	}
+}
+
+func (c *Decorator) cleanupExpiredCache() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	now := time.Now()
+	for id, entry := range c.data {
+		if now.After(entry.expiredAt) {
+			logger.Logger.Info("Cache expired - user removed", "userID", id, "expiredAt", entry.expiredAt)
+			delete(c.data, id)
+		}
+	}
 }
 
 func (c *Decorator) GetAll(limit, offset int) ([]*models.User, error) {
