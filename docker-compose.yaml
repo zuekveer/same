@@ -5,6 +5,7 @@ services:
       - .env
     ports:
       - "${APP_PORT}:${APP_PORT}"
+      - "${METRICS_PORT}:${METRICS_PORT}"
     depends_on:
       postgres:
         condition: service_healthy
@@ -43,6 +44,17 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
     depends_on:
       - prometheus
+
+  node-exporter:
+    image: prom/node-exporter:v1.6.1
+    container_name: node-exporter
+    ports:
+      - "${NODE_EXPORTER_PORT}:${NODE_EXPORTER_PORT}"
+    command:
+      - '--path.rootfs=/host'
+    volumes:
+      - '/:/host:ro,rslave'
+
 
 volumes:
   pgdata:
