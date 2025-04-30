@@ -4,8 +4,7 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
-
-	"app/internal/logger"
+	"log/slog"
 
 	"github.com/spf13/viper"
 )
@@ -40,11 +39,11 @@ func LoadConfig() (Config, error) {
 
 	content, err := embeddedConfig.ReadFile("config.yaml")
 	if err != nil {
-		logger.Logger.Warn("Failed to read embedded config.yaml: %v", err)
+		slog.Warn("Failed to read embedded config.yaml: %v", err)
 	} else {
 		v.SetConfigType("yaml")
 		if err := v.ReadConfig(bytes.NewBuffer(content)); err != nil {
-			logger.Logger.Warn("Failed to load embedded config.yaml: %v", err)
+			slog.Warn("Failed to load embedded config.yaml: %v", err)
 		}
 	}
 
@@ -52,7 +51,7 @@ func LoadConfig() (Config, error) {
 
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {
-		logger.Logger.Warn("Unable to decode config into struct: %v", err)
+		slog.Warn("Unable to decode config into struct: %v", err)
 	}
 
 	return cfg, nil

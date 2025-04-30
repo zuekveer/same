@@ -2,10 +2,10 @@ package cache
 
 import (
 	"context"
+	"log/slog"
 	"sync"
 	"time"
 
-	"app/internal/logger"
 	"app/internal/models"
 	"app/internal/repository"
 
@@ -69,7 +69,7 @@ func (c *Decorator) Get(id string) (*models.User, error) {
 	c.mu.RUnlock()
 	if ok && time.Now().Before(entry.expiredAt) {
 		c.cacheHits.Inc()
-		logger.Logger.Info("Cache hit", "userID", id)
+		slog.Info("Cache hit", "userID", id)
 		return entry.user, nil
 	}
 
@@ -81,7 +81,7 @@ func (c *Decorator) Get(id string) (*models.User, error) {
 	}
 
 	c.Set(userFromRepo)
-	logger.Logger.Info("Cache miss - loaded from repo", "userID", id)
+	slog.Info("Cache miss - loaded from repo", "userID", id)
 	return userFromRepo, nil
 }
 
@@ -92,10 +92,10 @@ func (c *Decorator) CleanupExpiredLoop(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			logger.Logger.Info("Cleaning expired cache entries...")
+			slog.Info("Cleaning expired cache entries...")
 			c.cleanupExpiredCache()
 		case <-ctx.Done():
-			logger.Logger.Info("Cache cleanup loop shutting down")
+			slog.Info("Cache cleanup loop shutting down")
 			return
 		}
 	}
@@ -108,7 +108,7 @@ func (c *Decorator) cleanupExpiredCache() {
 	now := time.Now()
 	for id, entry := range c.data {
 		if now.After(entry.expiredAt) {
-			logger.Logger.Info("Cache expired - user removed", "userID", id, "expiredAt", entry.expiredAt)
+			slog.Info("Cache expired - user removed", "userID", id, "expiredAt", entry.expiredAt)
 			delete(c.data, id)
 		}
 	}

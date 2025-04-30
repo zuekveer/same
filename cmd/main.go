@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log/slog"
 	"os"
 
 	"app/internal/app"
@@ -12,7 +13,7 @@ func main() {
 	logger.Init()
 
 	if err := app.Run(context.Background()); err != nil {
-		logger.Logger.Error("Server failed", "error", err)
+		slog.Error("Server failed", "error", err)
 		os.Exit(1)
 	}
 }
