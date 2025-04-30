@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	logger.Init()
+	logger.Init() //should be removed?
 
 	if err := app.Run(context.Background()); err != nil {
 		slog.Error("Server failed", "error", err)

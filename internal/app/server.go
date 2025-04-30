@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -17,6 +16,8 @@ import (
 	"app/internal/repository"
 	"app/internal/storage"
 	"app/internal/usecase"
+
+	"github.com/pkg/errors"
 )
 
 func Run(ctx context.Context) error {
@@ -25,13 +26,13 @@ func Run(ctx context.Context) error {
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		slog.Error("Failed to load config", "error", err)
-		return fmt.Errorf("failed to load config: %w", err)
+		return errors.Wrap(err, "failed to load config")
 	}
 
 	slog.Info("Running migrations...", "dsn", cfg.DB.ConnString())
 	if err := database.Migrate(cfg.DB.ConnString()); err != nil {
 		slog.Error("Failed to run migrations", "error", err)
-		return fmt.Errorf("run migrations: %w", err)
+		return errors.Wrap(err, "run migrations")
 	}
 	slog.Info("Migrations completed")
 
@@ -63,11 +64,10 @@ func Run(ctx context.Context) error {
 		<-sigCh
 		shutdownCancel()
 	}()
-
-	slog.Info("Starting server", "port", cfg.App.Port)
+	
 	if err := app.Listen(":" + cfg.App.Port); err != nil {
 		slog.Error("Failed to start server", "port", cfg.App.Port, "error", err)
-		return fmt.Errorf("failed to start server on port %s: %w", cfg.App.Port, err)
+		return errors.Wrapf(err, "failed to start server on port %s:", cfg.App.Port)
 	}
 
 	<-shutdownCtx.Done()
