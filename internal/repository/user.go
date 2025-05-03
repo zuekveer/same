@@ -21,21 +21,21 @@ type UserRepo struct {
 }
 
 type UserProvider interface {
-	Create(user *models.User) (string, error)
-	Update(user *models.User) error
+	Create(ctx context.Context, user *models.User) (string, error)
+	Update(ctx context.Context, user *models.User) error
 	Get(id string) (*models.User, error)
 	Delete(cxt context.Context, id string) error
-	GetAll(limit, offset int) ([]*models.User, error)
+	GetAll(ctx context.Context, limit, offset int) ([]*models.User, error)
 }
 
 func NewUserRepo(db *pgxpool.Pool) *UserRepo {
 	return &UserRepo{db: db}
 }
 
-func (r *UserRepo) GetAll(limit, offset int) ([]*models.User, error) {
+func (r *UserRepo) GetAll(ctx context.Context, limit, offset int) ([]*models.User, error) {
 	var users []*models.User
 	query := "SELECT id, name, age FROM users ORDER BY id LIMIT $1 OFFSET $2"
-	rows, err := r.db.Query(context.Background(), query, limit, offset)
+	rows, err := r.db.Query(ctx, query, limit, offset)
 	if err != nil {
 		slog.Error("GetAll: Failed to query users", "limit", limit, "offset", offset, "error", err)
 		return nil, errors.Wrap(err, "failed to fetch users")
@@ -59,11 +59,11 @@ func (r *UserRepo) GetAll(limit, offset int) ([]*models.User, error) {
 	return users, nil
 }
 
-func (r *UserRepo) Create(user *models.User) (string, error) {
+func (r *UserRepo) Create(ctx context.Context, user *models.User) (string, error) {
 	id := uuid.New().String()
 	user.ID = id
 
-	_, err := r.db.Exec(context.Background(),
+	_, err := r.db.Exec(ctx,
 		"INSERT INTO users (id, name, age) VALUES ($1, $2, $3)",
 		user.ID, user.Name, user.Age)
 
@@ -92,8 +92,8 @@ func (r *UserRepo) Get(id string) (*models.User, error) {
 	return &user, nil
 }
 
-func (r *UserRepo) Update(user *models.User) error {
-	cmd, err := r.db.Exec(context.Background(),
+func (r *UserRepo) Update(ctx context.Context, user *models.User) error {
+	cmd, err := r.db.Exec(ctx,
 		"UPDATE users SET name=$1, age=$2 WHERE id=$3", user.Name, user.Age, user.ID)
 	if err != nil {
 		slog.Error("Update: DB error", "error", err)
