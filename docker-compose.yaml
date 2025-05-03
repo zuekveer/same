@@ -42,6 +42,8 @@ services:
       - "${GRAFANA_PORT}:${GRAFANA_PORT}"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+    volumes:
+      - grafana-data:/var/lib/grafana
     depends_on:
       - prometheus
 
@@ -58,3 +60,4 @@ services:
 
 volumes:
   pgdata:
+  grafana-data:

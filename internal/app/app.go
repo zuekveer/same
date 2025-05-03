@@ -23,6 +23,8 @@ import (
 )
 
 func Run(ctx context.Context) error {
+	//TODO: 0.add comments
+	//TODO: 1.разбери эту вермишель
 	slog.Info("Starting application")
 
 	logger.Init()
