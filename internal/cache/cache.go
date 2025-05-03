@@ -12,12 +12,10 @@ import (
 )
 
 type Decorator struct {
-	repo repository.UserProvider
-	ttl  time.Duration
-
-	mu   sync.RWMutex
-	data map[string]*cacheEntry
-
+	repo         repository.UserProvider
+	ttl          time.Duration
+	mu           sync.RWMutex
+	data         map[string]*cacheEntry
 	cacheMetrics *metrics.CacheMetrics
 }
 
@@ -26,12 +24,12 @@ type cacheEntry struct {
 	expiredAt time.Time
 }
 
-func NewDecorator(repo repository.UserProvider, ttl time.Duration, cacheMetrics *metrics.CacheMetrics) *Decorator {
+func NewDecorator(repo repository.UserProvider, ttl time.Duration, metrics *metrics.CacheMetrics) *Decorator {
 	return &Decorator{
 		repo:         repo,
 		ttl:          ttl,
 		data:         make(map[string]*cacheEntry),
-		cacheMetrics: cacheMetrics,
+		cacheMetrics: metrics,
 	}
 }
 
@@ -57,17 +55,12 @@ func (c *Decorator) getFromCache(id string) (*models.User, bool) {
 
 func (c *Decorator) Get(id string) (*models.User, error) {
 	if user, ok := c.getFromCache(id); ok {
-		if c.cacheMetrics != nil {
-			c.cacheMetrics.Hits.Inc()
-		}
+		c.cacheMetrics.Hits.Inc()
 		slog.Info("Cache hit", "userID", id)
 		return user, nil
 	}
 
-	if c.cacheMetrics != nil {
-		c.cacheMetrics.Misses.Inc()
-	}
-
+	c.cacheMetrics.Misses.Inc()
 	userFromRepo, err := c.repo.Get(id)
 	if err != nil {
 		return nil, err
@@ -78,31 +71,16 @@ func (c *Decorator) Get(id string) (*models.User, error) {
 	return userFromRepo, nil
 }
 
-func (c *Decorator) CleanupExpiredLoop(ctx context.Context) {
-	ticker := time.NewTicker(c.cleanupInterval)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ticker.C:
-			slog.Info("Cleaning expired cache entries...")
-			c.cleanupExpiredCache()
-		case <-ctx.Done():
-			slog.Info("Cache cleanup loop shutting down")
-			return
-		}
-	}
-}
-
-func (c *Decorator) cleanupExpiredCache() {
+func (c *Decorator) CleanupExpired() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	now := time.Now()
 	for id, entry := range c.data {
 		if now.After(entry.expiredAt) {
-			slog.Info("Cache expired - user removed", "userID", id, "expiredAt", entry.expiredAt)
 			delete(c.data, id)
+			c.cacheMetrics.Evictions.Inc()
+			slog.Info("Cache expired - user removed", "userID", id)
 		}
 	}
 }
@@ -116,7 +94,6 @@ func (c *Decorator) Create(ctx context.Context, user *models.User) (string, erro
 	if err != nil {
 		return "", err
 	}
-
 	user.ID = id
 	c.setToCache(user)
 	return id, nil

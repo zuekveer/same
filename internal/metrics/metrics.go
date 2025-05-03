@@ -11,6 +11,7 @@ type Metrics struct {
 
 func NewMetrics() *Metrics {
 	reg := prometheus.NewRegistry()
+	InitHTTPMetrics(reg)
 
 	reg.MustRegister(
 		collectors.NewGoCollector(),

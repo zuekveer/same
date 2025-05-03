@@ -19,6 +19,7 @@ import (
 	"app/internal/usecase"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func Run(ctx context.Context) error {
@@ -43,11 +44,15 @@ func Run(ctx context.Context) error {
 	defer db.Close()
 	slog.Info("Connected to database")
 
-	expirationDuration := 10 * time.Minute
-	cleanupInterval := 5 * time.Minute
+	metrics.InitHTTPMetrics(prometheus.DefaultRegisterer)
 
+	metricsServer := metrics.NewMetrics()
+	cacheMetrics := metrics.NewCacheMetrics(metricsServer.Registry())
+
+	expirationDuration := 10 * time.Minute
 	userRepo := repository.NewUserRepo(db)
-	userCachedRepo := cache.NewDecorator(userRepo, expirationDuration, cleanupInterval)
+	userCachedRepo := cache.NewDecorator(userRepo, expirationDuration, cacheMetrics)
+
 	userUC := usecase.NewUserUsecase(userCachedRepo)
 	userHandler := handler.NewHandler(userUC)
 	app := getRouter(userHandler)
@@ -55,9 +60,21 @@ func Run(ctx context.Context) error {
 	shutdownCtx, shutdownCancel := context.WithCancel(ctx)
 	defer shutdownCancel()
 
-	go userCachedRepo.CleanupExpiredLoop(shutdownCtx)
+	// Periodic cleanup loop
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
 
-	metricsServer := metrics.NewMetrics()
+		for {
+			select {
+			case <-ticker.C:
+				userCachedRepo.CleanupExpired()
+			case <-shutdownCtx.Done():
+				return
+			}
+		}
+	}()
+
 	go metrics.RunMetricsServer(shutdownCtx, cfg.Metrics.Port, metricsServer.Registry())
 
 	go func() {

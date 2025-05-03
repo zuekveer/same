@@ -6,6 +6,11 @@ scrape_configs:
     static_configs:
       - targets: ['app:8082']
 
+  - job_name: 'http-handler'
+    static_configs:
+      - targets: [ 'another-app:8088']
+
   - job_name: 'node-exporter'
     static_configs:
       - targets: ['node-exporter:9100']
+
