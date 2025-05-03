@@ -6,20 +6,19 @@ import (
 	"sync"
 	"time"
 
+	"app/internal/metrics"
 	"app/internal/models"
 	"app/internal/repository"
-
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 type Decorator struct {
-	repo               repository.UserProvider
-	mu                 sync.RWMutex
-	data               map[string]*cacheEntry
-	expirationDuration time.Duration
-	cleanupInterval    time.Duration
-	cacheHits          prometheus.Counter
-	cacheMisses        prometheus.Counter
+	repo repository.UserProvider
+	ttl  time.Duration
+
+	mu   sync.RWMutex
+	data map[string]*cacheEntry
+
+	cacheMetrics *metrics.CacheMetrics
 }
 
 type cacheEntry struct {
@@ -27,30 +26,12 @@ type cacheEntry struct {
 	expiredAt time.Time
 }
 
-func NewDecorator(repo repository.UserProvider, expirationDuration, cleanupInterval time.Duration) *Decorator {
-	cacheHits := prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "cache_hits_total",
-			Help: "Total number of cache hits",
-		},
-	)
-	cacheMisses := prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "cache_misses_total",
-			Help: "Total number of cache misses",
-		},
-	)
-
-	prometheus.MustRegister(cacheHits)
-	prometheus.MustRegister(cacheMisses)
-
+func NewDecorator(repo repository.UserProvider, ttl time.Duration, cacheMetrics *metrics.CacheMetrics) *Decorator {
 	return &Decorator{
-		repo:               repo,
-		data:               make(map[string]*cacheEntry),
-		expirationDuration: expirationDuration,
-		cleanupInterval:    cleanupInterval,
-		cacheHits:          cacheHits,
-		cacheMisses:        cacheMisses,
+		repo:         repo,
+		ttl:          ttl,
+		data:         make(map[string]*cacheEntry),
+		cacheMetrics: cacheMetrics,
 	}
 }
 
@@ -59,7 +40,7 @@ func (c *Decorator) setToCache(user *models.User) {
 	defer c.mu.Unlock()
 	c.data[user.ID] = &cacheEntry{
 		user:      user,
-		expiredAt: time.Now().Add(c.expirationDuration),
+		expiredAt: time.Now().Add(c.ttl),
 	}
 }
 
@@ -76,12 +57,17 @@ func (c *Decorator) getFromCache(id string) (*models.User, bool) {
 
 func (c *Decorator) Get(id string) (*models.User, error) {
 	if user, ok := c.getFromCache(id); ok {
-		c.cacheHits.Inc()
+		if c.cacheMetrics != nil {
+			c.cacheMetrics.Hits.Inc()
+		}
 		slog.Info("Cache hit", "userID", id)
 		return user, nil
 	}
 
-	c.cacheMisses.Inc()
+	if c.cacheMetrics != nil {
+		c.cacheMetrics.Misses.Inc()
+	}
+
 	userFromRepo, err := c.repo.Get(id)
 	if err != nil {
 		return nil, err
