@@ -54,7 +54,7 @@ func NewDecorator(repo repository.UserProvider, expirationDuration, cleanupInter
 	}
 }
 
-func (c *Decorator) Set(user *models.User) {
+func (c *Decorator) setToCache(user *models.User) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.data[user.ID] = &cacheEntry{
@@ -63,24 +63,31 @@ func (c *Decorator) Set(user *models.User) {
 	}
 }
 
-func (c *Decorator) Get(id string) (*models.User, error) {
+func (c *Decorator) getFromCache(id string) (*models.User, bool) {
 	c.mu.RLock()
+	defer c.mu.RUnlock()
+
 	entry, ok := c.data[id]
-	c.mu.RUnlock()
-	if ok && time.Now().Before(entry.expiredAt) {
+	if !ok || time.Now().After(entry.expiredAt) {
+		return nil, false
+	}
+	return entry.user, true
+}
+
+func (c *Decorator) Get(id string) (*models.User, error) {
+	if user, ok := c.getFromCache(id); ok {
 		c.cacheHits.Inc()
 		slog.Info("Cache hit", "userID", id)
-		return entry.user, nil
+		return user, nil
 	}
 
 	c.cacheMisses.Inc()
-
 	userFromRepo, err := c.repo.Get(id)
 	if err != nil {
 		return nil, err
 	}
 
-	c.Set(userFromRepo)
+	c.setToCache(userFromRepo)
 	slog.Info("Cache miss - loaded from repo", "userID", id)
 	return userFromRepo, nil
 }
@@ -125,28 +132,28 @@ func (c *Decorator) Create(ctx context.Context, user *models.User) (string, erro
 	}
 
 	user.ID = id
-	c.Set(user)
+	c.setToCache(user)
 	return id, nil
 }
 
 func (c *Decorator) Update(ctx context.Context, user *models.User) error {
-	err := c.repo.Update(ctx, user)
-	if err != nil {
+	if err := c.repo.Update(ctx, user); err != nil {
 		return err
 	}
-
-	c.Set(user)
+	c.setToCache(user)
 	return nil
 }
 
+func (c *Decorator) deleteFromCache(id string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	delete(c.data, id)
+}
+
 func (c *Decorator) Delete(ctx context.Context, id string) error {
-	err := c.repo.Delete(ctx, id)
-	if err != nil {
+	if err := c.repo.Delete(ctx, id); err != nil {
 		return err
 	}
-
-	c.mu.Lock()
-	delete(c.data, id)
-	c.mu.Unlock()
+	c.deleteFromCache(id)
 	return nil
 }
