@@ -13,15 +13,15 @@ services:
   postgres:
     image: postgres:16
     environment:
-      - "POSTGRES_DB=${DB_NAME}"
-      - "POSTGRES_USER=${DB_USER}"
-      - "POSTGRES_PASSWORD=${DB_PASSWORD}"
+      - "POSTGRES_DB=${APP_DB_NAME}"
+      - "POSTGRES_USER=${APP_DB_USER}"
+      - "POSTGRES_PASSWORD=${APP_DB_PASSWORD}"
     ports:
-      - "${DB_HOST_PORT}:${DB_PORT}"
+      - "${APP_DB_HOST_PORT}:${APP_DB_PORT}"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER:-}" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${APP_DB_USER:-}" ]
       interval: 5s
       timeout: 10s
       retries: 3
