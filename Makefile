@@ -21,3 +21,6 @@ clean:
 
 migrate-add: ## Create new migration file, usage: make migrate-add name=<migration_name>
 	go run github.com/pressly/goose/v3/cmd/goose@latest create $(name) sql -dir internal/database/migrations
+
+lint:
+	golangci-lint run
