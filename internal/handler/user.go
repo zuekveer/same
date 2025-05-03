@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
+	"app/internal/apperr"
 	"app/internal/models"
-	"app/internal/repository"
 	"app/internal/usecase"
 
 	"github.com/gofiber/fiber/v2"
@@ -106,7 +106,7 @@ func (h *Handler) UpdateUser(c *fiber.Ctx) error {
 
 	user := models.ToEntityFromUpdate(req)
 	if err := h.userUC.UpdateUser(&user); err != nil {
-		if errors.Is(err, repository.ErrNotFound) {
+		if errors.Is(err, apperr.ErrNotFound) {
 			slog.Info("UpdateUser: User not found", "id", req.ID)
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
 		}
@@ -127,7 +127,7 @@ func (h *Handler) GetUser(c *fiber.Ctx) error {
 
 	user, err := h.userUC.GetUser(id)
 	if err != nil {
-		if errors.Is(err, repository.ErrNotFound) {
+		if errors.Is(err, apperr.ErrNotFound) {
 			slog.Info("GetUser: User not found", "id", id)
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
 		}
@@ -147,7 +147,7 @@ func (h *Handler) DeleteUser(c *fiber.Ctx) error {
 	}
 
 	if err := h.userUC.DeleteUser(context.Background(), id); err != nil {
-		if errors.Is(err, repository.ErrNotFound) {
+		if errors.Is(err, apperr.ErrNotFound) {
 			slog.Info("DeleteUser: User not found", "id", id)
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
 		}

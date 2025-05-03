@@ -114,12 +114,12 @@ func (c *Decorator) cleanupExpiredCache() {
 	}
 }
 
-func (c *Decorator) GetAll(limit, offset int) ([]*models.User, error) {
-	return c.repo.GetAll(limit, offset)
+func (c *Decorator) GetAll(ctx context.Context, limit, offset int) ([]*models.User, error) {
+	return c.repo.GetAll(ctx, limit, offset)
 }
 
-func (c *Decorator) Create(user *models.User) (string, error) {
-	id, err := c.repo.Create(user)
+func (c *Decorator) Create(ctx context.Context, user *models.User) (string, error) {
+	id, err := c.repo.Create(ctx, user)
 	if err != nil {
 		return "", err
 	}
@@ -129,8 +129,8 @@ func (c *Decorator) Create(user *models.User) (string, error) {
 	return id, nil
 }
 
-func (c *Decorator) Update(user *models.User) error {
-	err := c.repo.Update(user)
+func (c *Decorator) Update(ctx context.Context, user *models.User) error {
+	err := c.repo.Update(ctx, user)
 	if err != nil {
 		return err
 	}

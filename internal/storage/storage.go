@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func GetConnect(ctx context.Context, connStr string) *pgxpool.Pool {
+func GetConnect(ctx context.Context, connStr string) (*pgxpool.Pool, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	pool, err := pgxpool.New(ctx, connStr)
@@ -19,5 +19,5 @@ func GetConnect(ctx context.Context, connStr string) *pgxpool.Pool {
 		slog.Error("Unable to ping database: %v\n", err)
 	}
 	slog.Info("Connected to database")
-	return pool
+	return pool, nil
 }

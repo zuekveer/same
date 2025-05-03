@@ -12,6 +12,7 @@ import (
 	"app/internal/cache"
 	"app/internal/config"
 	"app/internal/handler"
+	"app/internal/logger"
 	"app/internal/metrics"
 	"app/internal/repository"
 	"app/internal/storage"
@@ -23,9 +24,10 @@ import (
 func Run(ctx context.Context) error {
 	slog.Info("Starting application")
 
+	logger.Init()
+
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		slog.Error("Failed to load config", "error", err)
 		return errors.Wrap(err, "failed to load config")
 	}
 
@@ -37,7 +39,7 @@ func Run(ctx context.Context) error {
 	slog.Info("Migrations completed")
 
 	slog.Info("Connecting to database", "db_host", cfg.DB.Host, "db_port", cfg.DB.Port)
-	db := storage.GetConnect(ctx, cfg.DB.ConnString())
+	db, _ := storage.GetConnect(ctx, cfg.DB.ConnString())
 	defer db.Close()
 	slog.Info("Connected to database")
 
@@ -64,7 +66,7 @@ func Run(ctx context.Context) error {
 		<-sigCh
 		shutdownCancel()
 	}()
-	
+
 	if err := app.Listen(":" + cfg.App.Port); err != nil {
 		slog.Error("Failed to start server", "port", cfg.App.Port, "error", err)
 		return errors.Wrapf(err, "failed to start server on port %s:", cfg.App.Port)

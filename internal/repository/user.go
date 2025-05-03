@@ -4,16 +4,13 @@ import (
 	"context"
 	"log/slog"
 
+	"app/internal/apperr"
 	"app/internal/models"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pkg/errors"
-)
-
-var (
-	ErrNotFound = errors.New("user not found")
 )
 
 type UserRepo struct {
@@ -24,7 +21,7 @@ type UserProvider interface {
 	Create(ctx context.Context, user *models.User) (string, error)
 	Update(ctx context.Context, user *models.User) error
 	Get(id string) (*models.User, error)
-	Delete(cxt context.Context, id string) error
+	Delete(ctx context.Context, id string) error
 	GetAll(ctx context.Context, limit, offset int) ([]*models.User, error)
 }
 
@@ -84,10 +81,10 @@ func (r *UserRepo) Get(id string) (*models.User, error) {
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			slog.Error("Get: User not found", "id", id, "error", err)
-			return &user, errors.Wrapf(ErrNotFound, "Get user %s:", id)
+			return nil, errors.Wrapf(apperr.ErrNotFound, "Get user %s:", id)
 		}
 		slog.Error("Get: Database query failed", "id", id, "error", err)
-		return &user, errors.Wrapf(err, "failed to query user %s:", id)
+		return nil, errors.Wrapf(err, "failed to query user %s:", id)
 	}
 	return &user, nil
 }
@@ -101,7 +98,7 @@ func (r *UserRepo) Update(ctx context.Context, user *models.User) error {
 	}
 	if cmd.RowsAffected() == 0 {
 		slog.Warn("Update: User not found", "userID", user.ID)
-		return ErrNotFound
+		return apperr.ErrNotFound
 	}
 	return nil
 }
@@ -114,7 +111,7 @@ func (r *UserRepo) Delete(ctx context.Context, id string) error {
 	}
 	if cmd.RowsAffected() == 0 {
 		slog.Warn("Delete: User not found", "userID", id)
-		return ErrNotFound
+		return apperr.ErrNotFound
 	}
 	return nil
 }
