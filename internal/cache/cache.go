@@ -15,7 +15,7 @@ type Decorator struct {
 	repo         repository.UserProvider
 	ttl          time.Duration
 	mu           sync.RWMutex
-	data         map[string]*cacheEntry
+	users        map[string]*cacheEntry
 	cacheMetrics *metrics.CacheMetrics
 }
 
@@ -28,7 +28,7 @@ func NewDecorator(repo repository.UserProvider, ttl time.Duration, metrics *metr
 	return &Decorator{
 		repo:         repo,
 		ttl:          ttl,
-		data:         make(map[string]*cacheEntry),
+		users:        make(map[string]*cacheEntry),
 		cacheMetrics: metrics,
 	}
 }
@@ -36,7 +36,7 @@ func NewDecorator(repo repository.UserProvider, ttl time.Duration, metrics *metr
 func (c *Decorator) setToCache(user *models.User) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.data[user.ID] = &cacheEntry{
+	c.users[user.ID] = &cacheEntry{
 		user:      user,
 		expiredAt: time.Now().Add(c.ttl),
 	}
@@ -46,17 +46,17 @@ func (c *Decorator) getFromCache(id string) (*models.User, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	entry, ok := c.data[id]
+	entry, ok := c.users[id]
 	if !ok || time.Now().After(entry.expiredAt) {
-		return nil, false
+		return entry.user, true
 	}
-	return entry.user, true
+	return nil, false
 }
 
 func (c *Decorator) Get(id string) (*models.User, error) {
 	if user, ok := c.getFromCache(id); ok {
 		c.cacheMetrics.Hits.Inc()
-		slog.Info("Cache hit", "userID", id)
+		slog.Debug("Cache hit", "userID", id)
 		return user, nil
 	}
 
@@ -67,7 +67,7 @@ func (c *Decorator) Get(id string) (*models.User, error) {
 	}
 
 	c.setToCache(userFromRepo)
-	slog.Info("Cache miss - loaded from repo", "userID", id)
+	slog.Debug("Cache miss - loaded from repo", "userID", id)
 	return userFromRepo, nil
 }
 
@@ -76,9 +76,9 @@ func (c *Decorator) CleanupExpired() {
 	defer c.mu.Unlock()
 
 	now := time.Now()
-	for id, entry := range c.data {
+	for id, entry := range c.users {
 		if now.After(entry.expiredAt) {
-			delete(c.data, id)
+			delete(c.users, id)
 			c.cacheMetrics.Evictions.Inc()
 			slog.Info("Cache expired - user removed", "userID", id)
 		}
@@ -110,7 +110,7 @@ func (c *Decorator) Update(ctx context.Context, user *models.User) error {
 func (c *Decorator) deleteFromCache(id string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	delete(c.data, id)
+	delete(c.users, id)
 }
 
 func (c *Decorator) Delete(ctx context.Context, id string) error {

@@ -5,12 +5,8 @@ import (
 	"os"
 )
 
-var (
-	Logger *slog.Logger
-)
-
 func Init() {
-	Logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+	Logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 	}))
 	slog.SetDefault(Logger)
