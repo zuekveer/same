@@ -38,7 +38,7 @@ func (h *Handler) CreateUser(ctx *fiber.Ctx) error {
 		slog.Info("CreateUser: Invalid input", "error", err)
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
 	}
-	//TODO: should be used ctx.Context from context or fiber?
+
 	user := models.ToEntityFromCreate(req)
 	id, err := h.userUC.CreateUser(ctx.UserContext(), &user)
 	if err != nil {

@@ -4,6 +4,10 @@ app:
 metrics:
   port: "8082"
 
+cache:
+  expiration_minutes: 10
+  cleanup_minutes: 5
+
 db:
   user: "postgres"
   password: "postgres"

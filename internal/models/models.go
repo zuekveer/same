@@ -58,12 +58,19 @@ func ToResponseList(users []*User) []UserResponse {
 	return res
 }
 
-var validate = validator.New()
+var validate *validator.Validate
 
+// Could I use init() instead of new validator in all new methods?
+//
+//	func init() {
+//		validate = validator.New()
+//	}
 func (r *CreateUserRequest) Validate() error {
+	validate = validator.New()
 	return validate.Struct(r)
 }
 
 func (r *UpdateUserRequest) Validate() error {
+	validate = validator.New()
 	return validate.Struct(r)
 }
