@@ -1,9 +1,8 @@
-FROM golang:1.23.0 AS builder
+FROM golang:1.23.8 AS builder
 
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod tidy && go mod download
-#RUN go install github.com/pressly/goose/v3/cmd/goose@latest
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o application cmd/main.go
 
