@@ -14,3 +14,6 @@ db:
   host: "postgres"
   port: "5432"
   name: "postgres"
+
+tracing:
+  jaeger_endpoint: "jaeger:4318"

@@ -46,19 +46,19 @@ func (c *Decorator) get(id string) (*models.User, bool) {
 
 	entry, ok := c.users[id]
 	if !ok || time.Now().After(entry.expiredAt) {
-		return entry.user, true
+		return nil, false
 	}
-	return nil, false
+	return entry.user, true
 }
 
-func (c *Decorator) Get(id string) (*models.User, error) {
+func (c *Decorator) Get(ctx context.Context, id string) (*models.User, error) {
 	if user, ok := c.get(id); ok {
 		metrics.IncCacheHits()
 		slog.Debug("Cache hit", "userID", id)
 		return user, nil
 	}
 	metrics.IncCacheMisses()
-	userFromRepo, err := c.repo.Get(id)
+	userFromRepo, err := c.repo.Get(ctx, id)
 	if err != nil {
 		return nil, err
 	}

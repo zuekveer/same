@@ -16,6 +16,7 @@ import (
 	"app/internal/metrics"
 	"app/internal/repository"
 	"app/internal/storage"
+	"app/internal/tracing"
 	"app/internal/usecase"
 
 	"github.com/pkg/errors"
@@ -41,6 +42,13 @@ func Run(ctx context.Context) error {
 		return errors.Wrap(err, "failed to connect to database")
 	}
 	defer db.Close()
+
+	tracer := tracing.InitTracer(cfg.Tracing)
+	defer func() {
+		if err := tracer(context.Background()); err != nil {
+			slog.Error("error shutting down tracer provider: %v", err)
+		}
+	}()
 
 	expirationDuration := time.Duration(cfg.Cache.ExpirationMinutes) * time.Minute
 	cleanupDuration := time.Duration(cfg.Cache.CleanupMinutes)

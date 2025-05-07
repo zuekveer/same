@@ -57,7 +57,19 @@ services:
     volumes:
       - '/:/host:ro,rslave'
 
+  jaeger:
+    image: jaegertracing/all-in-one:1.54
+    container_name: jaeger
+    ports:
+      - "${JAEGER_UI_PORT}:${JAEGER_UI_PORT}"
+      - "${JAEGER_GRPC_PORT}:${JAEGER_GRPC_PORT}"
+      - "${JAEGER_HTTP_PORT}:${JAEGER_HTTP_PORT}"
+      - "${JAEGER_GRPC_COLLECTOR_PORT}:${JAEGER_GRPC_COLLECTOR_PORT}"
+    volumes:
+      - jaeger-data:/var/lib/jaeger
+
 
 volumes:
   pgdata:
   grafana-data:
+  jaeger-data:

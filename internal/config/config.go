@@ -17,6 +17,7 @@ type Config struct {
 	Metrics MetricsConfig `mapstructure:"metrics"`
 	DB      DBConfig      `mapstructure:"db"`
 	Cache   CacheConfig   `mapstructure:"cache"`
+	Tracing TracingConfig `mapstructure:"tracing"`
 }
 
 type DBConfig struct {
@@ -40,6 +41,10 @@ type AppConfig struct {
 
 type MetricsConfig struct {
 	Port string
+}
+
+type TracingConfig struct {
+	JaegerEndpoint string `mapstructure:"jaeger_endpoint"`
 }
 
 func LoadConfig() (Config, error) {

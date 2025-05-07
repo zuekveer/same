@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"log/slog"
 	"strconv"
 
@@ -33,6 +32,9 @@ func NewHandler(userUC *usecase.UserUsecase) *Handler {
 }
 
 func (h *Handler) CreateUser(ctx *fiber.Ctx) error {
+	span := tracing(ctx, "CreateUser")
+	defer span.End()
+
 	var req models.CreateUserRequest
 	if err := ctx.BodyParser(&req); err != nil || req.Name == "" || req.Age <= 0 {
 		slog.Info("CreateUser: Invalid input", "error", err)
@@ -51,6 +53,9 @@ func (h *Handler) CreateUser(ctx *fiber.Ctx) error {
 }
 
 func (h *Handler) UpdateUser(ctx *fiber.Ctx) error {
+	span := tracing(ctx, "UpdateUser")
+	defer span.End()
+
 	var req models.UpdateUserRequest
 	if err := ctx.BodyParser(&req); err != nil || req.ID == "" || req.Name == "" || req.Age <= 0 {
 		slog.Info("UpdateUser: Invalid input", "error", err)
@@ -76,6 +81,9 @@ func (h *Handler) UpdateUser(ctx *fiber.Ctx) error {
 }
 
 func (h *Handler) GetUser(ctx *fiber.Ctx) error {
+	span := tracing(ctx, "GetUser")
+	defer span.End()
+
 	id := ctx.Params("id")
 	if _, err := uuid.Parse(id); err != nil {
 		slog.Info("GetUser: Invalid UUID", "id", id, "error", err)
@@ -97,13 +105,16 @@ func (h *Handler) GetUser(ctx *fiber.Ctx) error {
 }
 
 func (h *Handler) DeleteUser(ctx *fiber.Ctx) error {
+	span := tracing(ctx, "DeleteUser")
+	defer span.End()
+
 	id := ctx.Params("id")
 	if _, err := uuid.Parse(id); err != nil {
 		slog.Info("DeleteUser: Invalid UUID", "id", id, "error", err)
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid UUID"})
 	}
 
-	if err := h.userUC.DeleteUser(context.Background(), id); err != nil {
+	if err := h.userUC.DeleteUser(ctx.UserContext(), id); err != nil {
 		if errors.Is(err, apperr.ErrNotFound) {
 			slog.Info("DeleteUser: User not found", "id", id)
 			return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
@@ -117,6 +128,9 @@ func (h *Handler) DeleteUser(ctx *fiber.Ctx) error {
 }
 
 func (h *Handler) GetAllUsers(ctx *fiber.Ctx) error {
+	span := tracing(ctx, "GetAllUsers")
+	defer span.End()
+
 	limit, err1 := strconv.Atoi(ctx.Query("limit", "10"))
 	offset, err2 := strconv.Atoi(ctx.Query("offset", "0"))
 	if err1 != nil || err2 != nil || limit <= 0 || offset < 0 {
