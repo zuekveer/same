@@ -80,7 +80,7 @@ func (r *UserRepo) Get(id string) (*models.User, error) {
 		Scan(&user.ID, &user.Name, &user.Age)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			slog.Error("Get: User not found", "id", id, "error", err)
+			slog.Info("Get: User not found", "id", id, "error", err)
 			return nil, errors.Wrapf(apperr.ErrNotFound, "Get user %s:", id)
 		}
 		slog.Error("Get: Database query failed", "id", id, "error", err)

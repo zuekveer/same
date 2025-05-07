@@ -131,5 +131,5 @@ func (h *Handler) GetAllUsers(ctx *fiber.Ctx) error {
 	}
 
 	slog.Info("GetAllUsers: Users retrieved", "count", len(users))
-	return ctx.JSON(users)
+	return ctx.JSON(models.ToResponseList(users))
 }
