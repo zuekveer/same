@@ -82,7 +82,7 @@ func (h *Handler) GetUser(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid UUID"})
 	}
 
-	user, err := h.userUC.GetUser(id)
+	user, err := h.userUC.GetUser(ctx.UserContext(), id)
 	if err != nil {
 		if errors.Is(err, apperr.ErrNotFound) {
 			slog.Info("GetUser: User not found", "id", id)

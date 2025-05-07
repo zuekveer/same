@@ -20,7 +20,7 @@ type UserRepo struct {
 type UserProvider interface {
 	Create(ctx context.Context, user *models.User) (string, error)
 	Update(ctx context.Context, user *models.User) error
-	Get(id string) (*models.User, error)
+	Get(ctx context.Context, id string) (*models.User, error)
 	Delete(ctx context.Context, id string) error
 	GetAll(ctx context.Context, limit, offset int) ([]*models.User, error)
 }
@@ -73,7 +73,7 @@ func (r *UserRepo) Create(ctx context.Context, user *models.User) (string, error
 	return user.ID, nil
 }
 
-func (r *UserRepo) Get(id string) (*models.User, error) {
+func (r *UserRepo) Get(ctx context.Context, id string) (*models.User, error) {
 	var user models.User
 	err := r.db.QueryRow(context.Background(),
 		"SELECT id, name, age FROM users WHERE id=$1", id).
