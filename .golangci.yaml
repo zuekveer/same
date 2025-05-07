@@ -4,13 +4,14 @@ run:
 linters:
   enable:
     - errcheck
-    - gosimple
+#    - gosimple // for clarity and control over field mapping
     - govet
     - ineffassign
     - staticcheck
     - unused
     - goimports
     - bodyclose
+    - copyloopvar
     - sloglint
     - unconvert
     - gosec
