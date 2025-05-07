@@ -21,3 +21,4 @@ linters:
     - nilerr
     - contextcheck
     - whitespace
+    - typecheck
