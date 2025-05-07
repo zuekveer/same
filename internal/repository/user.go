@@ -75,7 +75,7 @@ func (r *UserRepo) Create(ctx context.Context, user *models.User) (string, error
 
 func (r *UserRepo) Get(ctx context.Context, id string) (*models.User, error) {
 	var user models.User
-	err := r.db.QueryRow(context.Background(),
+	err := r.db.QueryRow(ctx,
 		"SELECT id, name, age FROM users WHERE id=$1", id).
 		Scan(&user.ID, &user.Name, &user.Age)
 	if err != nil {

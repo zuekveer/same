@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"log/slog"
-	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -43,10 +42,10 @@ func Run(ctx context.Context) error {
 	}
 	defer db.Close()
 
-	tracer := tracing.InitTracer(cfg.Tracing)
+	tracerShutdown := tracing.InitTracer(ctx, cfg.Tracing)
 	defer func() {
-		if err := tracer(context.Background()); err != nil {
-			slog.Error("error shutting down tracer provider: %v", err)
+		if err := tracerShutdown(ctx); err != nil {
+			slog.Error("error shutting down tracer provider", "error", err)
 		}
 	}()
 
@@ -62,12 +61,14 @@ func Run(ctx context.Context) error {
 
 	reg := metrics.Register()
 
-	shutdownCtx, shutdownCancel := context.WithCancel(ctx)
-	defer shutdownCancel()
+	// Контекст завершения по сигналу
+	sigCtx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
-	go metrics.RunMetricsServer(shutdownCtx, cfg.Metrics.Port, reg)
+	// Запуск метрик
+	go metrics.RunMetricsServer(sigCtx, cfg.Metrics.Port, reg)
 
-	// Periodic cleanup loop
+	// Очистка кеша
 	go func() {
 		ticker := time.NewTicker(cleanupDuration * time.Minute)
 		defer ticker.Stop()
@@ -76,24 +77,30 @@ func Run(ctx context.Context) error {
 			select {
 			case <-ticker.C:
 				userCachedRepo.CleanupExpired()
-			case <-shutdownCtx.Done():
+			case <-sigCtx.Done():
 				return
 			}
 		}
 	}()
 
+	// Запуск Fiber-сервера в горутине
+	serverErr := make(chan error, 1)
 	go func() {
-		sigCh := make(chan os.Signal, 1)
-		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-		<-sigCh
-		shutdownCancel()
+		slog.Info("Starting HTTP server", "port", cfg.App.Port)
+		if err := app.Listen(":" + cfg.App.Port); err != nil {
+			serverErr <- errors.Wrap(err, "HTTP server failed")
+		}
 	}()
 
-	if err := app.Listen(":" + cfg.App.Port); err != nil {
-		return errors.Wrapf(err, "failed to start server on port %s:", cfg.App.Port)
+	// Ожидаем либо завершения, либо ошибки сервера
+	select {
+	case <-sigCtx.Done():
+		slog.Info("Shutdown signal received")
+		if err := app.Shutdown(); err != nil {
+			slog.Error("Failed to shutdown server gracefully", "error", err)
+		}
+		return nil
+	case err := <-serverErr:
+		return err
 	}
-
-	<-shutdownCtx.Done()
-
-	return nil
 }

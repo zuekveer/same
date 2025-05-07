@@ -13,8 +13,8 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 )
 
-func InitTracer(cfg config.TracingConfig) func(context.Context) error {
-	exp, err := otlptracehttp.New(context.Background(),
+func InitTracer(ctx context.Context, cfg config.TracingConfig) func(context.Context) error {
+	exp, err := otlptracehttp.New(ctx,
 		otlptracehttp.WithEndpoint(cfg.JaegerEndpoint),
 		otlptracehttp.WithInsecure(),
 		otlptracehttp.WithURLPath("/v1/traces"),
