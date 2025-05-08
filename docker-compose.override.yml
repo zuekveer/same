@@ -1,0 +1,9 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.debug
+    ports:
+      - "${APP_DEBUG_PORT}:${APP_DEBUG_PORT}"
+      - "${APP_PORT}:${APP_PORT}"
+      - "${METRICS_PORT}:${METRICS_PORT}"

@@ -1,0 +1,16 @@
+FROM golang:1.23.8
+
+WORKDIR /app
+
+RUN go install github.com/go-delve/delve/cmd/dlv@latest
+
+COPY go.mod go.sum ./
+RUN go mod tidy && go mod download
+
+COPY . .
+
+RUN go build -gcflags="all=-N -l" -o app-debug cmd/main.go
+
+EXPOSE 40000
+
+CMD ["dlv", "exec", "./app-debug", "--headless", "--listen=0.0.0.0:40000", "--api-version=2", "--accept-multiclient", "--log"]

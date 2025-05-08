@@ -15,22 +15,17 @@ import (
 )
 
 var (
-
-	// HTTP metrics
 	httpRequestDuration *prometheus.HistogramVec
 	httpRequestCount    *prometheus.CounterVec
 
-	// Cache metrics
 	cacheHits      prometheus.Counter
 	cacheMisses    prometheus.Counter
 	cacheEvictions prometheus.Counter
 )
 
-// Register инициализирует все метрики и возвращает registry для сервера
 func Register() *prometheus.Registry {
 	registry := prometheus.NewRegistry()
 
-	// HTTP
 	httpRequestDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "http_request_duration_seconds",
@@ -48,7 +43,6 @@ func Register() *prometheus.Registry {
 		[]string{"method", "path", "status"},
 	)
 
-	// Cache
 	cacheHits = prometheus.NewCounter(prometheus.CounterOpts{
 		Name: "cache_hits_total",
 		Help: "Total number of cache hits",
@@ -100,8 +94,6 @@ func Middleware() fiber.Handler {
 	}
 }
 
-// Methods to call metrics
-
 func IncCacheHits() {
 	cacheHits.Inc()
 }
@@ -114,9 +106,7 @@ func IncCacheEvictions() {
 	cacheEvictions.Inc()
 }
 
-// Сервер метрик
-
-func RunMetricsServer(ctx context.Context, port string, reg *prometheus.Registry) {
+func RunServer(ctx context.Context, port string, reg *prometheus.Registry) {
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 

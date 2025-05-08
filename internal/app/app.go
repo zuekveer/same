@@ -42,7 +42,7 @@ func Run(ctx context.Context) error {
 	}
 	defer db.Close()
 
-	tracerShutdown := tracing.InitTracer(ctx, cfg.Tracing)
+	tracerShutdown := tracing.Init(ctx, cfg.Tracing)
 	defer func() {
 		if err := tracerShutdown(ctx); err != nil {
 			slog.Error("error shutting down tracer provider", "error", err)
@@ -61,14 +61,11 @@ func Run(ctx context.Context) error {
 
 	reg := metrics.Register()
 
-	// Контекст завершения по сигналу
 	sigCtx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	// Запуск метрик
-	go metrics.RunMetricsServer(sigCtx, cfg.Metrics.Port, reg)
+	go metrics.RunServer(sigCtx, cfg.Metrics.Port, reg)
 
-	// Очистка кеша
 	go func() {
 		ticker := time.NewTicker(cleanupDuration * time.Minute)
 		defer ticker.Stop()
@@ -83,7 +80,6 @@ func Run(ctx context.Context) error {
 		}
 	}()
 
-	// Запуск Fiber-сервера в горутине
 	serverErr := make(chan error, 1)
 	go func() {
 		slog.Info("Starting HTTP server", "port", cfg.App.Port)
@@ -92,7 +88,6 @@ func Run(ctx context.Context) error {
 		}
 	}()
 
-	// Ожидаем либо завершения, либо ошибки сервера
 	select {
 	case <-sigCtx.Done():
 		slog.Info("Shutdown signal received")
