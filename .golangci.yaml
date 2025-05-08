@@ -4,7 +4,7 @@ run:
 linters:
   enable:
     - errcheck
-#    - gosimple // for clarity and control over field mapping
+    - gosimple
     - govet
     - ineffassign
     - staticcheck
@@ -21,4 +21,4 @@ linters:
     - nilerr
     - contextcheck
     - whitespace
-#    - typecheck
+    - typecheck
