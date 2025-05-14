@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	"app/internal/config"
+	"app/config"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"

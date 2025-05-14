@@ -15,5 +15,8 @@ db:
   port: "5432"
   name: "postgres"
 
+logger:
+  level: "info"
+
 tracing:
   jaeger_endpoint: "jaeger:4318"

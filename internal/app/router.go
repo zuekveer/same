@@ -2,7 +2,7 @@ package app
 
 import (
 	"app/internal/handler"
-	"app/internal/metrics"
+	"app/internal/middleware"
 
 	fiber "github.com/gofiber/fiber/v2"
 )
@@ -10,7 +10,7 @@ import (
 func getRouter(h handler.UserHandler) *fiber.App {
 	app := fiber.New()
 
-	app.Use(metrics.Middleware())
+	app.Use(middleware.Middleware())
 	app.Post("/user", h.CreateUser)
 	app.Put("/user", h.UpdateUser)
 	app.Get("/user/:id", h.GetUser)

@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"time"
 
-	fiber "github.com/gofiber/fiber/v2"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
@@ -15,18 +14,18 @@ import (
 )
 
 var (
-	httpRequestDuration *prometheus.HistogramVec
-	httpRequestCount    *prometheus.CounterVec
+	HttpRequestDuration *prometheus.HistogramVec
+	HttpRequestCount    *prometheus.CounterVec
 
-	cacheHits      prometheus.Counter
-	cacheMisses    prometheus.Counter
-	cacheEvictions prometheus.Counter
+	cacheHits    prometheus.Counter
+	cacheMisses  prometheus.Counter
+	cacheExpired prometheus.Counter
 )
 
-func Register() *prometheus.Registry {
+func Register(ctx context.Context, port string) *prometheus.Registry {
 	registry := prometheus.NewRegistry()
 
-	httpRequestDuration = prometheus.NewHistogramVec(
+	HttpRequestDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "http_request_duration_seconds",
 			Help:    "Histogram of HTTP request durations",
@@ -35,7 +34,7 @@ func Register() *prometheus.Registry {
 		[]string{"method", "path", "status"},
 	)
 
-	httpRequestCount = prometheus.NewCounterVec(
+	HttpRequestCount = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "http_requests_total",
 			Help: "Total number of HTTP requests",
@@ -53,7 +52,7 @@ func Register() *prometheus.Registry {
 		Help: "Total number of cache misses",
 	})
 
-	cacheEvictions = prometheus.NewCounter(prometheus.CounterOpts{
+	cacheExpired = prometheus.NewCounter(prometheus.CounterOpts{
 		Name: "cache_evictions_total",
 		Help: "Total number of evicted entries",
 	})
@@ -61,37 +60,21 @@ func Register() *prometheus.Registry {
 	registry.MustRegister(
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-		httpRequestDuration,
-		httpRequestCount,
+		HttpRequestDuration,
+		HttpRequestCount,
 		cacheHits,
 		cacheMisses,
-		cacheEvictions,
+		cacheExpired,
 	)
+
+	go runServer(ctx, port, registry)
 
 	return registry
 }
 
-func Middleware() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		if c.Path() == "/metrics" {
-			return c.Next()
-		}
-
-		start := time.Now()
-		err := c.Next()
-		duration := time.Since(start).Seconds()
-		status := c.Response().StatusCode()
-
-		path := c.Route().Path
-		if path == "" {
-			path = c.Path()
-		}
-
-		httpRequestDuration.WithLabelValues(c.Method(), path, strconv.Itoa(status)).Observe(duration)
-		httpRequestCount.WithLabelValues(c.Method(), path, strconv.Itoa(status)).Inc()
-
-		return err
-	}
+func ObserveHttpRequest(method, path string, status int, duration float64) {
+	HttpRequestDuration.WithLabelValues(method, path, strconv.Itoa(status)).Observe(duration)
+	HttpRequestCount.WithLabelValues(method, path, strconv.Itoa(status)).Inc()
 }
 
 func IncCacheHits() {
@@ -102,11 +85,11 @@ func IncCacheMisses() {
 	cacheMisses.Inc()
 }
 
-func IncCacheEvictions() {
-	cacheEvictions.Inc()
+func IncCacheExpired() {
+	cacheExpired.Inc()
 }
 
-func RunServer(ctx context.Context, port string, reg *prometheus.Registry) {
+func runServer(ctx context.Context, port string, reg *prometheus.Registry) {
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 
@@ -120,8 +103,7 @@ func RunServer(ctx context.Context, port string, reg *prometheus.Registry) {
 
 	go func() {
 		slog.Info("Starting metrics server", "port", port)
-		err := server.ListenAndServe()
-		if err != nil {
+		if err := server.ListenAndServe(); err != nil {
 			if errors.Is(err, http.ErrServerClosed) {
 				slog.Info("Metrics server closed gracefully")
 			} else {
@@ -133,6 +115,8 @@ func RunServer(ctx context.Context, port string, reg *prometheus.Registry) {
 	go func() {
 		<-ctx.Done()
 		slog.Info("Shutting down metrics server")
-		_ = server.Shutdown(ctx)
+		if err := server.Shutdown(ctx); err != nil {
+			slog.Error("Error during metrics shutdown", "error", err)
+		}
 	}()
 }

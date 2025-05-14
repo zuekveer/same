@@ -7,9 +7,9 @@ import (
 	"syscall"
 	"time"
 
+	"app/config"
 	"app/database"
 	"app/internal/cache"
-	"app/internal/config"
 	"app/internal/handler"
 	"app/internal/logger"
 	"app/internal/metrics"
@@ -23,12 +23,13 @@ import (
 
 func Run(ctx context.Context) error {
 	slog.Info("Starting application")
-	logger.Init()
 
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		return errors.Wrap(err, "failed to load config")
 	}
+
+	logger.Init(cfg.Logger.Level)
 
 	if err := database.Migrate(cfg.DB.ConnString()); err != nil {
 		slog.Error("Failed to run migrations", "error", err)
@@ -49,25 +50,20 @@ func Run(ctx context.Context) error {
 		}
 	}()
 
-	expirationDuration := time.Duration(cfg.Cache.ExpirationMinutes) * time.Minute
-	cleanupDuration := time.Duration(cfg.Cache.CleanupMinutes)
-
 	userRepo := repository.NewUserRepo(db)
-	userCachedRepo := cache.NewDecorator(userRepo, expirationDuration)
+	userCachedRepo := cache.NewDecorator(userRepo, cfg.Cache.ExpirationMinutes)
 
 	userUC := usecase.NewUserUsecase(userCachedRepo)
 	userHandler := handler.NewHandler(userUC)
 	app := getRouter(userHandler)
 
-	reg := metrics.Register()
+	metrics.Register(ctx, cfg.Metrics.Port)
 
 	sigCtx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	go metrics.RunServer(sigCtx, cfg.Metrics.Port, reg)
-
 	go func() {
-		ticker := time.NewTicker(cleanupDuration * time.Minute)
+		ticker := time.NewTicker(cfg.Cache.CleanupMinutes)
 		defer ticker.Stop()
 
 		for {

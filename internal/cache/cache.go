@@ -76,7 +76,7 @@ func (c *Decorator) CleanupExpired() {
 	for id, entry := range c.users {
 		if now.After(entry.expiredAt) {
 			delete(c.users, id)
-			metrics.IncCacheEvictions()
+			metrics.IncCacheExpired()
 			slog.Debug("Cache expired - user removed", "userID", id)
 		}
 	}

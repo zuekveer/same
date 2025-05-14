@@ -4,6 +4,12 @@ import (
 	validator "github.com/go-playground/validator/v10"
 )
 
+var validate = validator.New()
+
+func Validate(data interface{}) error {
+	return validate.Struct(data)
+}
+
 type User struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
@@ -60,19 +66,15 @@ func ToResponseList(users []*User) []UserResponse {
 	return res
 }
 
-var validate *validator.Validate
-
 // Could I use init() instead of new validator in all new methods?
 //
 //	func init() {
 //		validate = validator.New()
 //	}
 func (r *CreateUserRequest) Validate() error {
-	validate = validator.New()
-	return validate.Struct(r)
+	return Validate(r)
 }
 
 func (r *UpdateUserRequest) Validate() error {
-	validate = validator.New()
-	return validate.Struct(r)
+	return Validate(r)
 }

@@ -5,6 +5,7 @@ import (
 	"embed"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -18,6 +19,7 @@ type Config struct {
 	DB      DBConfig      `mapstructure:"db"`
 	Cache   CacheConfig   `mapstructure:"cache"`
 	Tracing TracingConfig `mapstructure:"tracing"`
+	Logger  LoggerConfig  `mapstructure:"logger"`
 }
 
 type DBConfig struct {
@@ -28,11 +30,15 @@ type DBConfig struct {
 	Name     string
 }
 
+type LoggerConfig struct {
+	Level string `mapstructure:"level"`
+}
+
 // without mapstructure tag configs doesn't work in app.go
 
 type CacheConfig struct {
-	ExpirationMinutes int `mapstructure:"expiration_minutes"`
-	CleanupMinutes    int `mapstructure:"cleanup_minutes"`
+	ExpirationMinutes time.Duration `mapstructure:"expiration_minutes"`
+	CleanupMinutes    time.Duration `mapstructure:"cleanup_minutes"`
 }
 
 type AppConfig struct {
