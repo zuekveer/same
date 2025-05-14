@@ -35,19 +35,21 @@ func ToEntityFromCreate(req CreateUserRequest) User {
 }
 
 func ToEntityFromUpdate(req UpdateUserRequest) User {
-	return User{
-		ID:   req.ID,
-		Name: req.Name,
-		Age:  req.Age,
-	}
+	// return User{
+	//	ID:   req.ID,
+	//	Name: req.Name,
+	//	Age:  req.Age,
+	//}
+	return User(req)
 }
 
 func (u User) ToResponse() UserResponse {
-	return UserResponse{
-		ID:   u.ID,
-		Name: u.Name,
-		Age:  u.Age,
-	}
+	// return UserResponse{
+	//	ID:   u.ID,
+	//	Name: u.Name,
+	//	Age:  u.Age,
+	//}
+	return UserResponse(u)
 }
 
 func ToResponseList(users []*User) []UserResponse {
