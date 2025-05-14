@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	pgxpool "github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pkg/errors"
 )
 

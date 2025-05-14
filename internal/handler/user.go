@@ -8,7 +8,7 @@ import (
 	"app/internal/models"
 	"app/internal/usecase"
 
-	"github.com/gofiber/fiber/v2"
+	fiber "github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )

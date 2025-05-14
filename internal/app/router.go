@@ -4,7 +4,7 @@ import (
 	"app/internal/handler"
 	"app/internal/metrics"
 
-	"github.com/gofiber/fiber/v2"
+	fiber "github.com/gofiber/fiber/v2"
 )
 
 func getRouter(h handler.UserHandler) *fiber.App {
