@@ -11,7 +11,14 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	"go.opentelemetry.io/otel/trace"
 )
+
+var tracer = otel.Tracer("app")
+
+func Start(ctx context.Context, name string) (context.Context, trace.Span) {
+	return tracer.Start(ctx, name)
+}
 
 func Init(ctx context.Context, cfg config.TracingConfig) func(context.Context) error {
 	exp, err := otlptracehttp.New(ctx,

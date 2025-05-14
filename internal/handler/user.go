@@ -6,6 +6,7 @@ import (
 
 	"app/internal/apperr"
 	"app/internal/models"
+	"app/internal/tracing"
 	"app/internal/usecase"
 
 	fiber "github.com/gofiber/fiber/v2"
@@ -32,7 +33,9 @@ func NewHandler(userUC *usecase.UserUsecase) *Handler {
 }
 
 func (h *Handler) CreateUser(ctx *fiber.Ctx) error {
-	defer tracing(ctx, "CreateUser").End()
+	ctxWithSpan, span := tracing.Start(ctx.UserContext(), "Handler.CreateUser")
+	defer span.End()
+	ctx.SetUserContext(ctxWithSpan)
 
 	var req models.CreateUserRequest
 	if err := ctx.BodyParser(&req); err != nil || req.Name == "" || req.Age <= 0 {
@@ -52,7 +55,9 @@ func (h *Handler) CreateUser(ctx *fiber.Ctx) error {
 }
 
 func (h *Handler) UpdateUser(ctx *fiber.Ctx) error {
-	defer tracing(ctx, "DeleteUser").End()
+	ctxWithSpan, span := tracing.Start(ctx.UserContext(), "Handler.DeleteUser")
+	defer span.End()
+	ctx.SetUserContext(ctxWithSpan)
 
 	var req models.UpdateUserRequest
 	if err := ctx.BodyParser(&req); err != nil || req.ID == "" || req.Name == "" || req.Age <= 0 {
@@ -79,7 +84,9 @@ func (h *Handler) UpdateUser(ctx *fiber.Ctx) error {
 }
 
 func (h *Handler) GetUser(ctx *fiber.Ctx) error {
-	defer tracing(ctx, "GetUser").End()
+	ctxWithSpan, span := tracing.Start(ctx.UserContext(), "Handler.GetUser")
+	defer span.End()
+	ctx.SetUserContext(ctxWithSpan)
 
 	id := ctx.Params("id")
 	if _, err := uuid.Parse(id); err != nil {
@@ -102,7 +109,9 @@ func (h *Handler) GetUser(ctx *fiber.Ctx) error {
 }
 
 func (h *Handler) DeleteUser(ctx *fiber.Ctx) error {
-	defer tracing(ctx, "DeleteUser").End()
+	ctxWithSpan, span := tracing.Start(ctx.UserContext(), "Handler.DeleteUser")
+	defer span.End()
+	ctx.SetUserContext(ctxWithSpan)
 
 	id := ctx.Params("id")
 	if _, err := uuid.Parse(id); err != nil {
@@ -124,7 +133,9 @@ func (h *Handler) DeleteUser(ctx *fiber.Ctx) error {
 }
 
 func (h *Handler) GetAllUsers(ctx *fiber.Ctx) error {
-	defer tracing(ctx, "GetAllUsers").End()
+	ctxWithSpan, span := tracing.Start(ctx.UserContext(), "Handler.GetAllUsers")
+	defer span.End()
+	ctx.SetUserContext(ctxWithSpan)
 
 	limit, err1 := strconv.Atoi(ctx.Query("limit", "10"))
 	offset, err2 := strconv.Atoi(ctx.Query("offset", "0"))

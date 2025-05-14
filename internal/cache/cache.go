@@ -9,6 +9,7 @@ import (
 	"app/internal/metrics"
 	"app/internal/models"
 	"app/internal/repository"
+	"app/internal/tracing"
 )
 
 type Decorator struct {
@@ -52,6 +53,9 @@ func (c *Decorator) get(id string) (*models.User, bool) {
 }
 
 func (c *Decorator) Get(ctx context.Context, id string) (*models.User, error) {
+	ctx, span := tracing.Start(ctx, "Cache.GetUser")
+	defer span.End()
+
 	if user, ok := c.get(id); ok {
 		metrics.IncCacheHits()
 		slog.Debug("Cache hit", "userID", id)
@@ -83,10 +87,15 @@ func (c *Decorator) CleanupExpired() {
 }
 
 func (c *Decorator) GetAll(ctx context.Context, limit, offset int) ([]*models.User, error) {
+	ctx, span := tracing.Start(ctx, "Cache.GetAllUsers")
+	defer span.End()
 	return c.repo.GetAll(ctx, limit, offset)
 }
 
 func (c *Decorator) Create(ctx context.Context, user *models.User) (string, error) {
+	ctx, span := tracing.Start(ctx, "Cache.CreateUser")
+	defer span.End()
+
 	id, err := c.repo.Create(ctx, user)
 	if err != nil {
 		return "", err
@@ -97,6 +106,9 @@ func (c *Decorator) Create(ctx context.Context, user *models.User) (string, erro
 }
 
 func (c *Decorator) Update(ctx context.Context, user *models.User) error {
+	ctx, span := tracing.Start(ctx, "Cache.UpdateUser")
+	defer span.End()
+
 	if err := c.repo.Update(ctx, user); err != nil {
 		return err
 	}
@@ -111,6 +123,9 @@ func (c *Decorator) delete(id string) {
 }
 
 func (c *Decorator) Delete(ctx context.Context, id string) error {
+	ctx, span := tracing.Start(ctx, "Cache.DeleteUser")
+	defer span.End()
+
 	if err := c.repo.Delete(ctx, id); err != nil {
 		return err
 	}

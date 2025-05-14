@@ -6,6 +6,7 @@ import (
 
 	"app/internal/apperr"
 	"app/internal/models"
+	"app/internal/tracing"
 
 	"github.com/google/uuid"
 	pgx "github.com/jackc/pgx/v5"
@@ -30,6 +31,9 @@ func NewUserRepo(db *pgxpool.Pool) *UserRepo {
 }
 
 func (r *UserRepo) GetAll(ctx context.Context, limit, offset int) ([]*models.User, error) {
+	ctx, span := tracing.Start(ctx, "Repository.GetAllUsers")
+	defer span.End()
+
 	var users []*models.User
 	query := "SELECT id, name, age FROM users ORDER BY id LIMIT $1 OFFSET $2"
 	rows, err := r.db.Query(ctx, query, limit, offset)
@@ -57,6 +61,9 @@ func (r *UserRepo) GetAll(ctx context.Context, limit, offset int) ([]*models.Use
 }
 
 func (r *UserRepo) Create(ctx context.Context, user *models.User) (string, error) {
+	ctx, span := tracing.Start(ctx, "Repository.CreateUser")
+	defer span.End()
+
 	id := uuid.New().String()
 	user.ID = id
 
@@ -74,6 +81,9 @@ func (r *UserRepo) Create(ctx context.Context, user *models.User) (string, error
 }
 
 func (r *UserRepo) Get(ctx context.Context, id string) (*models.User, error) {
+	ctx, span := tracing.Start(ctx, "Repository.GetUser")
+	defer span.End()
+
 	var user models.User
 	err := r.db.QueryRow(ctx,
 		"SELECT id, name, age FROM users WHERE id=$1", id).
@@ -90,6 +100,9 @@ func (r *UserRepo) Get(ctx context.Context, id string) (*models.User, error) {
 }
 
 func (r *UserRepo) Update(ctx context.Context, user *models.User) error {
+	ctx, span := tracing.Start(ctx, "Repository.UpdateUser")
+	defer span.End()
+
 	cmd, err := r.db.Exec(ctx,
 		"UPDATE users SET name=$1, age=$2 WHERE id=$3", user.Name, user.Age, user.ID)
 	if err != nil {
@@ -104,6 +117,9 @@ func (r *UserRepo) Update(ctx context.Context, user *models.User) error {
 }
 
 func (r *UserRepo) Delete(ctx context.Context, id string) error {
+	ctx, span := tracing.Start(ctx, "Repository.DeleteUser")
+	defer span.End()
+
 	cmd, err := r.db.Exec(ctx, "DELETE FROM users WHERE id=$1", id)
 	if err != nil {
 		slog.Error("Delete: DB error", "error", err)
