@@ -71,6 +71,12 @@ func (c *Decorator) Get(ctx context.Context, id string) (*models.User, error) {
 	slog.Debug("Cache miss - loading from repo", "userID", id)
 
 	result, err, _ := c.group.Do(id, func() (interface{}, error) {
+		if user, ok := c.get(id); ok {
+			slog.Debug("Cache hit (inside singleflight)", "userID", id)
+			metrics.IncCacheHits()
+			return user, nil
+		}
+
 		userFromRepo, err := c.repo.Get(ctx, id)
 		if err != nil {
 			return nil, err
