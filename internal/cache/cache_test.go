@@ -6,18 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"app/internal/metrics"
 	"app/internal/models"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
-
-func TestMain(m *testing.M) {
-	metrics.Register(context.Background(), "9090")
-	m.Run()
-}
 
 type MockUserProvider struct {
 	mock.Mock
@@ -55,6 +49,7 @@ func (m *MockUserProvider) GetAll(ctx context.Context, limit, offset int) ([]*mo
 }
 
 func TestDecorator_Get_CacheHit(t *testing.T) {
+	// Setup
 	mockRepo := new(MockUserProvider)
 	cache := NewDecorator(mockRepo, 10*time.Minute)
 
@@ -83,13 +78,13 @@ func TestDecorator_Get_CacheMiss(t *testing.T) {
 		Age:  30,
 	}
 
-	mockRepo.On("Get", mock.Anything, "123").Return(testUser, nil)
+	mockRepo.On("Get", mock.Anything, "123").Return(testUser, nil).Once()
 
 	user, err := cache.Get(context.Background(), "123")
 
 	require.NoError(t, err)
 	assert.Equal(t, testUser, user)
-	mockRepo.AssertCalled(t, "Get", mock.Anything, "123")
+	mockRepo.AssertExpectations(t)
 
 	cachedUser, ok := cache.get("123")
 	assert.True(t, ok)
@@ -102,13 +97,14 @@ func TestDecorator_Get_RepositoryError(t *testing.T) {
 
 	expectedErr := errors.New("repository error")
 
-	mockRepo.On("Get", mock.Anything, "123").Return(nil, expectedErr)
+	mockRepo.On("Get", mock.Anything, "123").Return(nil, expectedErr).Once()
 
 	user, err := cache.Get(context.Background(), "123")
 
 	require.Error(t, err)
 	assert.Nil(t, user)
 	assert.Equal(t, expectedErr, err)
+	mockRepo.AssertExpectations(t)
 }
 
 func TestDecorator_Get_ExpiredEntry(t *testing.T) {
@@ -124,13 +120,13 @@ func TestDecorator_Get_ExpiredEntry(t *testing.T) {
 	cache.set(testUser)
 	time.Sleep(2 * time.Nanosecond) // Ensure entry expires
 
-	mockRepo.On("Get", mock.Anything, "123").Return(testUser, nil)
+	mockRepo.On("Get", mock.Anything, "123").Return(testUser, nil).Once()
 
 	user, err := cache.Get(context.Background(), "123")
 
 	require.NoError(t, err)
 	assert.Equal(t, testUser, user)
-	mockRepo.AssertCalled(t, "Get", mock.Anything, "123")
+	mockRepo.AssertExpectations(t)
 }
 
 func TestDecorator_Create(t *testing.T) {
@@ -142,13 +138,13 @@ func TestDecorator_Create(t *testing.T) {
 		Age:  30,
 	}
 
-	mockRepo.On("Create", mock.Anything, testUser).Return("123", nil)
+	mockRepo.On("Create", mock.Anything, testUser).Return("123", nil).Once()
 
 	id, err := cache.Create(context.Background(), testUser)
 
 	require.NoError(t, err)
 	assert.Equal(t, "123", id)
-	mockRepo.AssertCalled(t, "Create", mock.Anything, testUser)
+	mockRepo.AssertExpectations(t)
 
 	cachedUser, ok := cache.get("123")
 	assert.True(t, ok)
@@ -167,12 +163,12 @@ func TestDecorator_Update(t *testing.T) {
 		Age:  35,
 	}
 
-	mockRepo.On("Update", mock.Anything, testUser).Return(nil)
+	mockRepo.On("Update", mock.Anything, testUser).Return(nil).Once()
 
 	err := cache.Update(context.Background(), testUser)
 
 	require.NoError(t, err)
-	mockRepo.AssertCalled(t, "Update", mock.Anything, testUser)
+	mockRepo.AssertExpectations(t)
 
 	cachedUser, ok := cache.get("123")
 	assert.True(t, ok)
@@ -191,12 +187,12 @@ func TestDecorator_Delete(t *testing.T) {
 
 	cache.set(testUser)
 
-	mockRepo.On("Delete", mock.Anything, "123").Return(nil)
+	mockRepo.On("Delete", mock.Anything, "123").Return(nil).Once()
 
 	err := cache.Delete(context.Background(), "123")
 
 	require.NoError(t, err)
-	mockRepo.AssertCalled(t, "Delete", mock.Anything, "123")
+	mockRepo.AssertExpectations(t)
 
 	_, ok := cache.get("123")
 	assert.False(t, ok)
@@ -211,13 +207,13 @@ func TestDecorator_GetAll(t *testing.T) {
 		{ID: "2", Name: "User 2", Age: 35},
 	}
 
-	mockRepo.On("GetAll", mock.Anything, 10, 0).Return(testUsers, nil)
+	mockRepo.On("GetAll", mock.Anything, 10, 0).Return(testUsers, nil).Once()
 
 	users, err := cache.GetAll(context.Background(), 10, 0)
 
 	require.NoError(t, err)
 	assert.Equal(t, testUsers, users)
-	mockRepo.AssertCalled(t, "GetAll", mock.Anything, 10, 0)
+	mockRepo.AssertExpectations(t)
 
 	_, ok := cache.get("1")
 	assert.False(t, ok)
@@ -252,24 +248,34 @@ func TestDecorator_ConcurrentAccess(t *testing.T) {
 		Age:  30,
 	}
 
-	mockRepo.On("Get", mock.Anything, "123").Return(testUser, nil).Once()
+	mockRepo.On("Get", mock.Anything, "123").Return(testUser, nil).Run(func(args mock.Arguments) {
+		time.Sleep(time.Millisecond * 10)
+	}).Once()
 
 	numGoroutines := 100
 
 	results := make(chan *models.User, numGoroutines)
+	errs := make(chan error, numGoroutines)
 
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
 			user, err := cache.Get(context.Background(), "123")
-			assert.NoError(t, err)
+			if err != nil {
+				errs <- err
+				return
+			}
 			results <- user
 		}()
 	}
 
 	for i := 0; i < numGoroutines; i++ {
-		user := <-results
-		assert.Equal(t, testUser, user)
+		select {
+		case user := <-results:
+			assert.Equal(t, testUser, user)
+		case err := <-errs:
+			require.NoError(t, err)
+		}
 	}
 
-	mockRepo.AssertNumberOfCalls(t, "Get", 1)
+	mockRepo.AssertExpectations(t)
 }

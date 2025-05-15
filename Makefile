@@ -25,5 +25,8 @@ migrate-add: ## Create new migration file, usage: make migrate-add name=<migrati
 lint:
 	@golangci-lint run
 
+test:
+	@go test -v ./...
+
 debug:
 	@docker compose -f docker-compose.yaml -f docker-compose.override.yml up --build
