@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMain(m *testing.M) {
@@ -67,7 +68,7 @@ func TestDecorator_Get_CacheHit(t *testing.T) {
 
 	user, err := cache.Get(context.Background(), "123")
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, testUser, user)
 	mockRepo.AssertNotCalled(t, "Get")
 }
@@ -86,7 +87,7 @@ func TestDecorator_Get_CacheMiss(t *testing.T) {
 
 	user, err := cache.Get(context.Background(), "123")
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, testUser, user)
 	mockRepo.AssertCalled(t, "Get", mock.Anything, "123")
 
@@ -105,7 +106,7 @@ func TestDecorator_Get_RepositoryError(t *testing.T) {
 
 	user, err := cache.Get(context.Background(), "123")
 
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, user)
 	assert.Equal(t, expectedErr, err)
 }
@@ -127,7 +128,7 @@ func TestDecorator_Get_ExpiredEntry(t *testing.T) {
 
 	user, err := cache.Get(context.Background(), "123")
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, testUser, user)
 	mockRepo.AssertCalled(t, "Get", mock.Anything, "123")
 }
@@ -145,7 +146,7 @@ func TestDecorator_Create(t *testing.T) {
 
 	id, err := cache.Create(context.Background(), testUser)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "123", id)
 	mockRepo.AssertCalled(t, "Create", mock.Anything, testUser)
 
@@ -170,7 +171,7 @@ func TestDecorator_Update(t *testing.T) {
 
 	err := cache.Update(context.Background(), testUser)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	mockRepo.AssertCalled(t, "Update", mock.Anything, testUser)
 
 	cachedUser, ok := cache.get("123")
@@ -194,7 +195,7 @@ func TestDecorator_Delete(t *testing.T) {
 
 	err := cache.Delete(context.Background(), "123")
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	mockRepo.AssertCalled(t, "Delete", mock.Anything, "123")
 
 	_, ok := cache.get("123")
@@ -214,7 +215,7 @@ func TestDecorator_GetAll(t *testing.T) {
 
 	users, err := cache.GetAll(context.Background(), 10, 0)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, testUsers, users)
 	mockRepo.AssertCalled(t, "GetAll", mock.Anything, 10, 0)
 
