@@ -3,15 +3,23 @@ package cache
 import (
 	"context"
 	"errors"
+	"os"
+	"sync"
 	"testing"
 	"time"
 
+	"app/internal/metrics"
 	"app/internal/models"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
+
+func TestMain(m *testing.M) {
+	metrics.Register(context.Background(), "8089")
+	os.Exit(m.Run())
+}
 
 type MockUserProvider struct {
 	mock.Mock
@@ -49,7 +57,6 @@ func (m *MockUserProvider) GetAll(ctx context.Context, limit, offset int) ([]*mo
 }
 
 func TestDecorator_Get_CacheHit(t *testing.T) {
-	// Setup
 	mockRepo := new(MockUserProvider)
 	cache := NewDecorator(mockRepo, 10*time.Minute)
 
@@ -118,7 +125,7 @@ func TestDecorator_Get_ExpiredEntry(t *testing.T) {
 	}
 
 	cache.set(testUser)
-	time.Sleep(2 * time.Nanosecond) // Ensure entry expires
+	time.Sleep(2 * time.Nanosecond)
 
 	mockRepo.On("Get", mock.Anything, "123").Return(testUser, nil).Once()
 
@@ -248,17 +255,18 @@ func TestDecorator_ConcurrentAccess(t *testing.T) {
 		Age:  30,
 	}
 
-	mockRepo.On("Get", mock.Anything, "123").Return(testUser, nil).Run(func(args mock.Arguments) {
-		time.Sleep(time.Millisecond * 10)
-	}).Once()
+	mockRepo.On("Get", mock.Anything, "123").Return(testUser, nil)
 
 	numGoroutines := 100
-
 	results := make(chan *models.User, numGoroutines)
 	errs := make(chan error, numGoroutines)
 
+	var wg sync.WaitGroup
+	wg.Add(numGoroutines)
+
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
+			defer wg.Done()
 			user, err := cache.Get(context.Background(), "123")
 			if err != nil {
 				errs <- err
@@ -268,14 +276,16 @@ func TestDecorator_ConcurrentAccess(t *testing.T) {
 		}()
 	}
 
-	for i := 0; i < numGoroutines; i++ {
-		select {
-		case user := <-results:
-			assert.Equal(t, testUser, user)
-		case err := <-errs:
-			require.NoError(t, err)
-		}
+	wg.Wait()
+	close(results)
+	close(errs)
+
+	for user := range results {
+		assert.Equal(t, testUser, user)
+	}
+	for err := range errs {
+		require.NoError(t, err)
 	}
 
-	mockRepo.AssertExpectations(t)
+	mockRepo.AssertNumberOfCalls(t, "Get", 1)
 }
