@@ -2,9 +2,12 @@ package cache
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
+
+	"golang.org/x/sync/singleflight"
 
 	"app/internal/metrics"
 	"app/internal/models"
@@ -13,10 +16,12 @@ import (
 )
 
 type Decorator struct {
-	repo  repository.UserProvider
-	ttl   time.Duration
-	mu    sync.RWMutex
-	users map[string]*cacheEntry
+	repo     repository.UserProvider
+	ttl      time.Duration
+	mu       sync.RWMutex
+	users    map[string]*cacheEntry
+	group    singleflight.Group
+	groupAll singleflight.Group
 }
 
 type cacheEntry struct {
@@ -61,15 +66,24 @@ func (c *Decorator) Get(ctx context.Context, id string) (*models.User, error) {
 		slog.Debug("Cache hit", "userID", id)
 		return user, nil
 	}
+
 	metrics.IncCacheMisses()
-	userFromRepo, err := c.repo.Get(ctx, id)
+	slog.Debug("Cache miss - loading from repo", "userID", id)
+
+	result, err, _ := c.group.Do(id, func() (interface{}, error) {
+		userFromRepo, err := c.repo.Get(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		c.set(userFromRepo)
+		slog.Debug("Loaded from repo (singleflight)", "userID", id)
+		return userFromRepo, nil
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	c.set(userFromRepo)
-	slog.Debug("Cache miss - loaded from repo", "userID", id)
-	return userFromRepo, nil
+	return result.(*models.User), nil
 }
 
 func (c *Decorator) CleanupExpired() {
@@ -89,7 +103,15 @@ func (c *Decorator) CleanupExpired() {
 func (c *Decorator) GetAll(ctx context.Context, limit, offset int) ([]*models.User, error) {
 	ctx, span := tracing.Start(ctx, "Cache.GetAllUsers")
 	defer span.End()
-	return c.repo.GetAll(ctx, limit, offset)
+
+	key := fmt.Sprintf("getAll:%d:%d", limit, offset)
+	result, err, _ := c.groupAll.Do(key, func() (interface{}, error) {
+		return c.repo.GetAll(ctx, limit, offset)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result.([]*models.User), nil
 }
 
 func (c *Decorator) Create(ctx context.Context, user *models.User) (string, error) {
