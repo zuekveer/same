@@ -32,7 +32,6 @@ func Run(ctx context.Context) error {
 	logger.Init(cfg.Logger.Level)
 
 	if err := database.Migrate(cfg.DB.ConnString()); err != nil {
-		slog.Error("Failed to run migrations", "error", err)
 		return errors.Wrap(err, "run migrations")
 	}
 

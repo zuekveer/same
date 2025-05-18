@@ -14,12 +14,12 @@ import (
 var embeddedConfig embed.FS
 
 type Config struct {
-	App     AppConfig     `mapstructure:"app"`
-	Metrics MetricsConfig `mapstructure:"metrics"`
-	DB      DBConfig      `mapstructure:"db"`
-	Cache   CacheConfig   `mapstructure:"cache"`
-	Tracing TracingConfig `mapstructure:"tracing"`
-	Logger  LoggerConfig  `mapstructure:"logger"`
+	App     AppConfig
+	Metrics MetricsConfig
+	DB      DBConfig
+	Cache   CacheConfig
+	Tracing TracingConfig
+	Logger  LoggerConfig
 }
 
 type DBConfig struct {
@@ -34,11 +34,9 @@ type LoggerConfig struct {
 	Level string `mapstructure:"level"`
 }
 
-// without mapstructure tag configs doesn't work in app.go
-
 type CacheConfig struct {
-	ExpirationMinutes time.Duration `mapstructure:"expiration_minutes"`
-	CleanupMinutes    time.Duration `mapstructure:"cleanup_minutes"`
+	ExpirationMinutes time.Duration
+	CleanupMinutes    time.Duration
 }
 
 type AppConfig struct {
@@ -50,7 +48,7 @@ type MetricsConfig struct {
 }
 
 type TracingConfig struct {
-	JaegerEndpoint string `mapstructure:"jaeger_endpoint"`
+	JaegerEndpoint string
 }
 
 func LoadConfig() (Config, error) {

@@ -2,12 +2,9 @@ package cache
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"sync"
 	"time"
-
-	"golang.org/x/sync/singleflight"
 
 	"app/internal/metrics"
 	"app/internal/models"
@@ -16,12 +13,10 @@ import (
 )
 
 type Decorator struct {
-	repo     repository.UserProvider
-	ttl      time.Duration
-	mu       sync.RWMutex
-	users    map[string]*cacheEntry
-	group    singleflight.Group
-	groupAll singleflight.Group
+	repo  repository.UserProvider
+	ttl   time.Duration
+	mu    sync.RWMutex
+	users map[string]*cacheEntry
 }
 
 type cacheEntry struct {
@@ -70,26 +65,14 @@ func (c *Decorator) Get(ctx context.Context, id string) (*models.User, error) {
 	metrics.IncCacheMisses()
 	slog.Debug("Cache miss - loading from repo", "userID", id)
 
-	result, err, _ := c.group.Do(id, func() (interface{}, error) {
-		if user, ok := c.get(id); ok {
-			slog.Debug("Cache hit (inside singleflight)", "userID", id)
-			metrics.IncCacheHits()
-			return user, nil
-		}
-
-		userFromRepo, err := c.repo.Get(ctx, id)
-		if err != nil {
-			return nil, err
-		}
-		c.set(userFromRepo)
-		slog.Debug("Loaded from repo (singleflight)", "userID", id)
-		return userFromRepo, nil
-	})
+	userFromRepo, err := c.repo.Get(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	return result.(*models.User), nil
+	c.set(userFromRepo)
+	slog.Debug("Loaded from repo", "userID", id)
+	return userFromRepo, nil
 }
 
 func (c *Decorator) CleanupExpired() {
@@ -110,14 +93,8 @@ func (c *Decorator) GetAll(ctx context.Context, limit, offset int) ([]*models.Us
 	ctx, span := tracing.Start(ctx, "Cache.GetAllUsers")
 	defer span.End()
 
-	key := fmt.Sprintf("getAll:%d:%d", limit, offset)
-	result, err, _ := c.groupAll.Do(key, func() (interface{}, error) {
-		return c.repo.GetAll(ctx, limit, offset)
-	})
-	if err != nil {
-		return nil, err
-	}
-	return result.([]*models.User), nil
+	slog.Debug("Fetching GetAll from repo", "limit", limit, "offset", offset)
+	return c.repo.GetAll(ctx, limit, offset)
 }
 
 func (c *Decorator) Create(ctx context.Context, user *models.User) (string, error) {

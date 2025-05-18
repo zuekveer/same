@@ -12,6 +12,7 @@ import (
 	fiber "github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/codes"
 )
 
 type UserHandler interface {
@@ -46,6 +47,8 @@ func (h *Handler) CreateUser(ctx *fiber.Ctx) error {
 	user := models.ToEntityFromCreate(req)
 	id, err := h.userUC.CreateUser(ctx.UserContext(), &user)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		slog.Info("CreateUser: Failed to create user", "user", user, "error", err)
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -71,6 +74,8 @@ func (h *Handler) UpdateUser(ctx *fiber.Ctx) error {
 
 	user := models.ToEntityFromUpdate(req)
 	if err := h.userUC.UpdateUser(ctx.UserContext(), &user); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		if errors.Is(err, apperr.ErrNotFound) {
 			slog.Info("UpdateUser: User not found", "id", req.ID)
 			return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
@@ -96,6 +101,8 @@ func (h *Handler) GetUser(ctx *fiber.Ctx) error {
 
 	user, err := h.userUC.GetUser(ctx.UserContext(), id)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		if errors.Is(err, apperr.ErrNotFound) {
 			slog.Info("GetUser: User not found", "id", id)
 			return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
@@ -120,6 +127,8 @@ func (h *Handler) DeleteUser(ctx *fiber.Ctx) error {
 	}
 
 	if err := h.userUC.DeleteUser(ctx.UserContext(), id); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		if errors.Is(err, apperr.ErrNotFound) {
 			slog.Info("DeleteUser: User not found", "id", id)
 			return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
@@ -146,6 +155,8 @@ func (h *Handler) GetAllUsers(ctx *fiber.Ctx) error {
 
 	users, err := h.userUC.GetAllUsers(ctx.UserContext(), limit, offset)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		slog.Info("GetAllUsers: Failed to retrieve users", "limit", limit, "offset", offset, "error", err)
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}

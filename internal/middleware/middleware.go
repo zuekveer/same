@@ -8,7 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func Middleware() fiber.Handler {
+func RequestMetrics() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		if c.Path() == "/metrics" {
 			return c.Next()

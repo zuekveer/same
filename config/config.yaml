@@ -5,8 +5,8 @@ metrics:
   port: "8082"
 
 cache:
-  expiration_minutes: 10
-  cleanup_minutes: 5
+  expirationMinutes: 10
+  cleanupMinutes: 5
 
 db:
   user: "postgres"
@@ -19,4 +19,4 @@ logger:
   level: "info"
 
 tracing:
-  jaeger_endpoint: "jaeger:4318"
+  jaegerEndpoint: "jaeger:4318"
