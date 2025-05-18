@@ -12,6 +12,7 @@ import (
 	pgx "github.com/jackc/pgx/v5"
 	pgxpool "github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel/codes"
 )
 
 type UserRepo struct {
@@ -38,6 +39,8 @@ func (r *UserRepo) GetAll(ctx context.Context, limit, offset int) ([]*models.Use
 	query := "SELECT id, name, age FROM users ORDER BY id LIMIT $1 OFFSET $2"
 	rows, err := r.db.Query(ctx, query, limit, offset)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		slog.Error("GetAll: Failed to query users", "limit", limit, "offset", offset, "error", err)
 		return nil, errors.Wrap(err, "failed to fetch users")
 	}
@@ -72,6 +75,8 @@ func (r *UserRepo) Create(ctx context.Context, user *models.User) (string, error
 		user.ID, user.Name, user.Age)
 
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		slog.Error("Create: Failed to insert user", "user", user, "error", err)
 		return "", errors.Wrap(err, "failed to create user")
 	}
@@ -89,6 +94,8 @@ func (r *UserRepo) Get(ctx context.Context, id string) (*models.User, error) {
 		"SELECT id, name, age FROM users WHERE id=$1", id).
 		Scan(&user.ID, &user.Name, &user.Age)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		if errors.Is(err, pgx.ErrNoRows) {
 			slog.Info("Get: User not found", "id", id, "error", err)
 			return nil, errors.Wrapf(apperr.ErrNotFound, "Get user %s:", id)
@@ -106,6 +113,8 @@ func (r *UserRepo) Update(ctx context.Context, user *models.User) error {
 	cmd, err := r.db.Exec(ctx,
 		"UPDATE users SET name=$1, age=$2 WHERE id=$3", user.Name, user.Age, user.ID)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		slog.Error("Update: DB error", "error", err)
 		return errors.Wrap(err, "update query failed")
 	}
@@ -122,6 +131,8 @@ func (r *UserRepo) Delete(ctx context.Context, id string) error {
 
 	cmd, err := r.db.Exec(ctx, "DELETE FROM users WHERE id=$1", id)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		slog.Error("Delete: DB error", "error", err)
 		return errors.Wrap(err, "delete query failed")
 	}
