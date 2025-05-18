@@ -1,0 +1,75 @@
+services:
+  app:
+    build: .
+    env_file:
+      - .env
+    ports:
+      - "${APP_PORT}:${APP_PORT}"
+      - "${METRICS_PORT}:${METRICS_PORT}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16
+    environment:
+      - "POSTGRES_DB=${APP_DB_NAME}"
+      - "POSTGRES_USER=${APP_DB_USER}"
+      - "POSTGRES_PASSWORD=${APP_DB_PASSWORD}"
+    ports:
+      - "${APP_DB_HOST_PORT}:${APP_DB_PORT}"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${APP_DB_USER:-}" ]
+      interval: 5s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  prometheus:
+    image: prom/prometheus:v2.40.0
+    container_name: prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "${PROMETHEUS_PORT}:${PROMETHEUS_PORT}"
+
+  grafana:
+    image: grafana/grafana:8.5.2
+    container_name: grafana
+    ports:
+      - "${GRAFANA_PORT}:${GRAFANA_PORT}"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
+  node-exporter:
+    image: prom/node-exporter:v1.6.1
+    container_name: node-exporter
+    ports:
+      - "${NODE_EXPORTER_PORT}:${NODE_EXPORTER_PORT}"
+    command:
+      - '--path.rootfs=/host'
+    volumes:
+      - '/:/host:ro,rslave'
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.54
+    container_name: jaeger
+    ports:
+      - "${JAEGER_UI_PORT}:${JAEGER_UI_PORT}"
+      - "${JAEGER_GRPC_PORT}:${JAEGER_GRPC_PORT}"
+      - "${JAEGER_HTTP_PORT}:${JAEGER_HTTP_PORT}"
+      - "${JAEGER_GRPC_COLLECTOR_PORT}:${JAEGER_GRPC_COLLECTOR_PORT}"
+    volumes:
+      - jaeger-data:/var/lib/jaeger
+
+
+volumes:
+  pgdata:
+  grafana-data:
+  jaeger-data:

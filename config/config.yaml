@@ -1,0 +1,22 @@
+app:
+  port: "8088"
+
+metrics:
+  port: "8082"
+
+cache:
+  expiration_minutes: 10
+  cleanup_minutes: 5
+
+db:
+  user: "postgres"
+  password: "postgres"
+  host: "postgres"
+  port: "5432"
+  name: "postgres"
+
+logger:
+  level: "info"
+
+tracing:
+  jaeger_endpoint: "jaeger:4318"
