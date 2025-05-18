@@ -15,12 +15,10 @@ func GetConnect(ctx context.Context, connStr string) (*pgxpool.Pool, error) {
 
 	pool, err := pgxpool.New(ctx, connStr)
 	if err != nil {
-		slog.Error("Unable to connect to database", "error", err)
 		return nil, errors.Wrap(err, "unable to connect to database")
 	}
 
 	if err := pool.Ping(ctx); err != nil {
-		slog.Error("Unable to ping database", "error", err)
 		return nil, errors.Wrap(err, "unable to ping database")
 	}
 

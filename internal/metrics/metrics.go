@@ -17,9 +17,7 @@ var (
 	HttpRequestDuration *prometheus.HistogramVec
 	HttpRequestCount    *prometheus.CounterVec
 
-	cacheHits    prometheus.Counter
-	cacheMisses  prometheus.Counter
-	cacheExpired prometheus.Counter
+	cacheCounter *prometheus.CounterVec
 )
 
 func Register(ctx context.Context, port string) *prometheus.Registry {
@@ -42,29 +40,20 @@ func Register(ctx context.Context, port string) *prometheus.Registry {
 		[]string{"method", "path", "status"},
 	)
 
-	cacheHits = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "cache_hits_total",
-		Help: "Total number of cache hits",
-	})
-
-	cacheMisses = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "cache_misses_total",
-		Help: "Total number of cache misses",
-	})
-
-	cacheExpired = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "cache_evictions_total",
-		Help: "Total number of evicted entries",
-	})
+	cacheCounter = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "cache_events_total",
+			Help: "Total number of cache events",
+		},
+		[]string{"status"}, // status: hit | miss | expired
+	)
 
 	registry.MustRegister(
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 		HttpRequestDuration,
 		HttpRequestCount,
-		cacheHits,
-		cacheMisses,
-		cacheExpired,
+		cacheCounter,
 	)
 
 	go runServer(ctx, port, registry)
@@ -78,15 +67,15 @@ func ObserveHttpRequest(method, path string, status int, duration float64) {
 }
 
 func IncCacheHits() {
-	cacheHits.Inc()
+	cacheCounter.WithLabelValues("hit").Inc()
 }
 
 func IncCacheMisses() {
-	cacheMisses.Inc()
+	cacheCounter.WithLabelValues("miss").Inc()
 }
 
 func IncCacheExpired() {
-	cacheExpired.Inc()
+	cacheCounter.WithLabelValues("expired").Inc()
 }
 
 func runServer(ctx context.Context, port string, reg *prometheus.Registry) {

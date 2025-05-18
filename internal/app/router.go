@@ -10,7 +10,7 @@ import (
 func getRouter(h handler.UserHandler) *fiber.App {
 	app := fiber.New()
 
-	app.Use(middleware.Middleware())
+	app.Use(middleware.RequestMetrics())
 	app.Post("/user", h.CreateUser)
 	app.Put("/user", h.UpdateUser)
 	app.Get("/user/:id", h.GetUser)
