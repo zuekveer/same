@@ -55,7 +55,7 @@ func (h *Handler) CreateUser(ctx *fiber.Ctx) error {
 }
 
 func (h *Handler) UpdateUser(ctx *fiber.Ctx) error {
-	ctxWithSpan, span := tracing.Start(ctx.UserContext(), "Handler.DeleteUser")
+	ctxWithSpan, span := tracing.Start(ctx.UserContext(), "Handler.UpdateUser")
 	defer span.End()
 	ctx.SetUserContext(ctxWithSpan)
 
